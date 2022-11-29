@@ -176,10 +176,31 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
                 new_keyframe_point.easing = value[1].easing
                 new_keyframe_point.handle_left_type = value[1].handle_left_type
                 new_keyframe_point.handle_right_type = value[1].handle_right_type
-                new_keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
-                new_keyframe_point.handle_left[1] = value[1].handle_left[1]
-                new_keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
-                new_keyframe_point.handle_right[1] = value[1].handle_right[1]
+                if value[3] and frame >= self.cycler.half_point and frame < self.cycler.num_animated_frames and not self.control.mirrored:
+                    new_keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
+                    new_keyframe_point.handle_left[1] = -value[1].handle_left[1]
+                    new_keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
+                    new_keyframe_point.handle_right[1] = -value[1].handle_right[1]
+                elif self.control.mirrored and frame >= self.cycler.half_point and frame < self.cycler.num_animated_frames:
+                    if self.type == "LOCATION" and self.axis=="X":
+                        keyframe_point.handle_left_type = value[1].handle_left_type
+                        keyframe_point.handle_right_type = value[1].handle_right_type
+                        keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
+                        keyframe_point.handle_left[1] = -value[1].handle_left[1]
+                        keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
+                        keyframe_point.handle_right[1] = -value[1].handle_right[1]
+                    elif self.type=="ROTATION_EULER" and self.axis in "YZ":
+                        keyframe_point.handle_left_type = value[1].handle_left_type
+                        keyframe_point.handle_right_type = value[1].handle_right_type
+                        keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
+                        keyframe_point.handle_left[1] = -value[1].handle_left[1]
+                        keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
+                        keyframe_point.handle_right[1] = -value[1].handle_right[1]
+                else:
+                    new_keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
+                    new_keyframe_point.handle_left[1] = value[1].handle_left[1]
+                    new_keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
+                    new_keyframe_point.handle_right[1] = value[1].handle_right[1]
                 new_keyframe_point.interpolation = value[1].interpolation
                 new_keyframe_point.period = value[1].period
                 new_keyframe_point.type = value[1].type
@@ -192,19 +213,19 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
                         keyframe_point.easing = value[1].easing
                         if self.control.mirrored:
                             if self.type == "LOCATION" and self.axis=="X":
-                                keyframe_point.handle_left_type = value[1].handle_right_type
-                                keyframe_point.handle_right_type = value[1].handle_left_type
-                                keyframe_point.handle_left[0] = (value[1].handle_right[0]-value[2])+frame
-                                keyframe_point.handle_left[1] = -value[1].handle_right[1]
-                                keyframe_point.handle_right[0] = (value[1].handle_left[0]-value[2])+frame
-                                keyframe_point.handle_right[1] = -value[1].handle_left[1]
+                                keyframe_point.handle_left_type = value[1].handle_left_type
+                                keyframe_point.handle_right_type = value[1].handle_right_type
+                                keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
+                                keyframe_point.handle_left[1] = -value[1].handle_left[1]
+                                keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
+                                keyframe_point.handle_right[1] = -value[1].handle_right[1]
                             elif self.type=="ROTATION_EULER" and self.axis in "YZ":
-                                keyframe_point.handle_left_type = value[1].handle_right_type
-                                keyframe_point.handle_right_type = value[1].handle_left_type
-                                keyframe_point.handle_left[0] = (value[1].handle_right[0]-value[2])+frame
-                                keyframe_point.handle_left[1] = -value[1].handle_right[1]
-                                keyframe_point.handle_right[0] = (value[1].handle_left[0]-value[2])+frame
-                                keyframe_point.handle_right[1] = -value[1].handle_left[1]
+                                keyframe_point.handle_left_type = value[1].handle_left_type
+                                keyframe_point.handle_right_type = value[1].handle_right_type
+                                keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
+                                keyframe_point.handle_left[1] = -value[1].handle_left[1]
+                                keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
+                                keyframe_point.handle_right[1] = -value[1].handle_right[1]
                         else:
                             if value[3]:
                                 keyframe_point.handle_left_type = value[1].handle_left_type
