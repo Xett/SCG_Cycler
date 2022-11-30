@@ -57,32 +57,17 @@ class SCG_CYCLER_OT_Add_Channel_Keyframe(bpy.types.Operator, Context_Interface):
     bl_label = "Add Keyframe"
     bl_description = "Add a new Keyframe to the Channel"
 
-    def bone_name_update(self, context):
-        control = self.cycler.controls.get(self.bone_name)
-        if control is not None:
-            self.__control__ = control
-            self.channel_type_axis_update(context)
-
-    bone_name : bpy.props.StringProperty(update=bone_name_update)
-
-    def channel_type_axis_update(self, context):
-        channel = self.control.get(self.channel_type, self.channel_axis)
-        if channel is not None:
-            self.__channel__ = channel
-    channel_type : bpy.props.StringProperty(update=channel_type_axis_update)
-    channel_axis : bpy.props.StringProperty(update=channel_type_axis_update)
+    bone_name : bpy.props.StringProperty()
+    channel_type : bpy.props.StringProperty()
+    channel_axis : bpy.props.StringProperty()
 
     @property
     def control(self):
-        if not hasattr(self, "__control__"):
-            self.bone_name_update(bpy.context)
-        return self.__control__
+        return self.cycler.controls.get(self.bone_name)
 
     @property
     def channel(self):
-        if not hasattr(self, "__channel__"):
-            self.channel_type_axis_update(bpy.context)
-        return self.__channel__
+        return self.control.get(self.channel_type, self.channel_axis)
 
     def execute(self, context):
         markers = [keyframe.marker for keyframe in self.channel]
@@ -91,39 +76,24 @@ class SCG_CYCLER_OT_Add_Channel_Keyframe(bpy.types.Operator, Context_Interface):
         self.channel.add(unused_markers[0])
         return {"FINISHED"}
 
-class SCG_CYCLER_OT_Remove_Control(bpy.types.Operator, Context_Interface):
+class SCG_CYCLER_OT_Remove_Channel_Keyframe(bpy.types.Operator, Context_Interface):
     bl_idname = "scg_cycler.remove_channel_keyframe"
     bl_label = "Remove Control"
     bl_description = "Remove a Control"
 
-    def bone_name_update(self, context):
-        control = self.cycler.controls.get(self.bone_name)
-        if control is not None:
-            self.__control__ = control
-            self.channel_type_axis_update(context)
+    bone_name : bpy.props.StringProperty()
+    channel_type : bpy.props.StringProperty()
+    channel_axis : bpy.props.StringProperty()
 
-    bone_name : bpy.props.StringProperty(update=bone_name_update)
-
-    def channel_type_axis_update(self, context):
-        channel = self.control.get(self.channel_type, self.channel_axis)
-        if channel is not None:
-            self.__channel__ = channel
-    channel_type : bpy.props.StringProperty(update=channel_type_axis_update)
-    channel_axis : bpy.props.StringProperty(update=channel_type_axis_update)
+    index : bpy.props.IntProperty(name="Index")
 
     @property
     def control(self):
-        if not hasattr(self, "__control__"):
-            self.bone_name_update(bpy.context)
-        return self.__control__
+        return self.cycler.controls.get(self.bone_name)
 
     @property
     def channel(self):
-        if not hasattr(self, "__channel__"):
-            self.channel_type_axis_update(bpy.context)
-        return self.__channel__
-
-    index : bpy.props.IntProperty(name="Index")
+        return self.control.get(self.channel_type, self.channel_axis)
     
     def execute(self, context):
         self.channel.remove(self.index)
@@ -132,7 +102,7 @@ class SCG_CYCLER_OT_Remove_Control(bpy.types.Operator, Context_Interface):
 ###############################
 #   Register and Unregister   #
 ###############################
-classes = (SCG_Cycler_Control_Channel_Keyframe, SCG_Cycler_Control_Channel_Keyframes, SCG_CYCLER_OT_Add_Channel_Keyframe, SCG_CYCLER_OT_Remove_Control)
+classes = (SCG_Cycler_Control_Channel_Keyframe, SCG_Cycler_Control_Channel_Keyframes, SCG_CYCLER_OT_Add_Channel_Keyframe, SCG_CYCLER_OT_Remove_Channel_Keyframe)
 
 def register():
     from bpy.utils import register_class
