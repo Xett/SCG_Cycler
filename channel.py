@@ -129,48 +129,48 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
     @property
     def expected_keyframes(self):
         expected_keyframes = {}
-        fcurve = self.fcurve
+
         for keyframe in self.keyframes:
             frame = keyframe.frame_marker.frame + keyframe.offset
-            if fcurve is not None:
-                for keyframe_point in fcurve.keyframe_points:
-                    if keyframe_point.co[0] == frame:
-                        expected_keyframes[frame] = (keyframe_point.co[1], keyframe_point, frame, False)
-                        if not self.control.mirrored:
-                            expected_keyframes[frame+self.cycler.half_point] = (-keyframe_point.co[1] if keyframe.inverted else keyframe_point.co[1], keyframe_point, frame, keyframe.inverted)
-                        if frame==self.cycler.frame_markers.markers[0].frame+keyframe.offset:
-                            expected_keyframes[frame+self.cycler.num_animated_frames] = (keyframe_point.co[1], keyframe_point, frame, False)
-                        else:
-                            for modifier in fcurve.modifiers:
-                                if modifier.type=="CYCLES" and not len(expected_keyframes)%2:
-                                    expected_keyframes[frame+self.cycler.num_animated_frames] = (fcurve.keyframe_points[0].co[1], keyframe_point, frame, False)
+            for keyframe_point in self.fcurve.keyframe_points:
+                if keyframe_point.co[0] == frame:
+                    # We expect the frame in the first half as-is, since it is the copy target
+                    expected_keyframes[frame] = (keyframe_point.co[1], keyframe_point, frame, False)
+                    if not self.control.mirrored:
+                        expected_keyframes[frame+self.cycler.half_point] = (-keyframe_point.co[1] if keyframe.inverted else keyframe_point.co[1], keyframe_point, frame, keyframe.inverted)
+                    # Get first frame marker in the channel instead
+                    if frame==self.keyframes.keyframes[0].frame_marker.frame+keyframe.offset:
+                        expected_keyframes[frame+self.cycler.num_animated_frames] = (keyframe_point.co[1], keyframe_point, frame, False)
+                    #elif len(fcurve.modifiers)>0:
+                    #    for modifier in fcurve.modifiers if modifier.type=="CYCLES" and not len(expected_keyframes)%2:
+                    #        expected_keyframes[frame+self.cycler.num_animated_frames] = (fcurve.keyframe_points[0].co[1], keyframe_point, frame, False)
         if self.control.mirrored:
             if self.mirror_channel is not None:
                 for keyframe in self.mirror_channel.keyframes:
                     frame = keyframe.frame_marker.frame + keyframe.offset
-                    if self.mirror_channel.fcurve is not None and fcurve is not None:
-                        for keyframe_point in self.mirror_channel.fcurve.keyframe_points:
-                            if keyframe_point.co[0] == frame:
-                                if self.type == "LOCATION":
-                                    expected_keyframes[frame+self.cycler.half_point] = (-keyframe_point.co[1] if self.axis == "X" else keyframe_point.co[1], keyframe_point, frame, False)
-                                elif self.type == "ROTATION_EULER":
-                                    expected_keyframes[frame+self.cycler.half_point] = (-keyframe_point.co[1] if self.axis in "YZ" else keyframe_point.co[1], keyframe_point, frame, False)
-                                else:
-                                    expected_keyframes[frame+self.cycler.half_point] = (keyframe_point.co[1], keyframe_point, frame, False)
+                    for keyframe_point in self.mirror_channel.fcurve.keyframe_points:
+                        if keyframe_point.co[0] == frame:
+                            if self.type == "LOCATION":
+                                expected_keyframes[frame+self.cycler.half_point] = (-keyframe_point.co[1] if self.axis == "X" else keyframe_point.co[1], keyframe_point, frame, False)
+                            elif self.type == "ROTATION_EULER":
+                                expected_keyframes[frame+self.cycler.half_point] = (-keyframe_point.co[1] if self.axis in "YZ" else keyframe_point.co[1], keyframe_point, frame, False)
+                            else:
+                                expected_keyframes[frame+self.cycler.half_point] = (keyframe_point.co[1], keyframe_point, frame, False)
             
         return expected_keyframes
 
-    def update(self):
-        expected_keyframes = self.expected_keyframes
-        fcurve = self.fcurve
-        if fcurve is None:
+    def update(self):        
+        # Can't do anything if we need fcurves and can't find them
+        if self.fcurve is None or (self.control.mirrored and self.mirror_fcurve is None):
             return
 
+        expected_keyframes = self.expected_keyframes
+
         # Insert a new frame if it doesn't exist, but we expect it to. Change values if it does already exist
-        current_keyframes = [keyframe_point.co[0] for keyframe_point in fcurve.keyframe_points]
+        current_keyframes = [keyframe_point.co[0] for keyframe_point in self.fcurve.keyframe_points]
         for frame, value in expected_keyframes.items():
             if frame not in current_keyframes:
-                new_keyframe_point = fcurve.keyframe_points.insert(frame, value[0])
+                new_keyframe_point = self.fcurve.keyframe_points.insert(frame, value[0])
                 new_keyframe_point.amplitude = value[1].amplitude
                 new_keyframe_point.back = value[1].back
                 new_keyframe_point.easing = value[1].easing
@@ -205,7 +205,7 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
                 new_keyframe_point.period = value[1].period
                 new_keyframe_point.type = value[1].type
             else:
-                for keyframe_point in fcurve.keyframe_points:
+                for keyframe_point in self.fcurve.keyframe_points:
                     if keyframe_point.co[0] == frame:
                         keyframe_point.co[1] = value[0]
                         keyframe_point.amplitude = value[1].amplitude
@@ -245,12 +245,17 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
                         keyframe_point.period = value[1].period
                         keyframe_point.type = value[1].type
                         break
-                fcurve.update()
+            self.fcurve.update()
 
         # Iterate through the keyframes to delete, find the keyframe, remove it and break out of finding it
-        keyframes_to_delete = [keyframe_point for keyframe_point in fcurve.keyframe_points if keyframe_point.co[0] not in expected_keyframes]
-        for keyframe_point in keyframes_to_delete:
-            fcurve.keyframe_points.remove(keyframe_point)
+        frames_to_delete = []
+        for keyframe_point in self.fcurve.keyframe_points:
+            if keyframe_point.co[0] not in expected_keyframes:
+                frames_to_delete.append(keyframe_point.co[0])
+        for frame in frames_to_delete:
+            for keyframe_point in self.fcurve.keyframe_points:
+                if keyframe_point.co[0] == frame:
+                    self.fcurve.keyframe_points.remove(keyframe_point)
                     
 
 ################
