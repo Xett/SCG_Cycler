@@ -45,7 +45,7 @@ class SCG_Cycler_Context(bpy.types.PropertyGroup):
 
     @property
     def half_point(self):
-        return round(self.num_animated_frames//2)+1
+        return round(self.num_animated_frames//2)
 
 #################
 #   Operators   #

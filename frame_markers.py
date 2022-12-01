@@ -47,7 +47,7 @@ class SCG_Cycler_Frame_Markers(bpy.types.PropertyGroup, Context_Interface):
             marker_1 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=marker.frame)
             marker_2 = bpy.context.scene.timeline_markers.new("{0} 2".format(marker.name), frame=marker.frame+self.cycler.half_point-1)
             if index == 0:
-                marker_3 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=marker.frame+self.cycler.num_animated_frames)
+                marker_3 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=self.cycler.num_animated_frames)
 
 #################
 #   Operators   #
