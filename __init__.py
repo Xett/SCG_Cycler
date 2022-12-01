@@ -8,13 +8,13 @@ bl_info = {
 }
 
 import bpy
-from . import context, frame_markers, controls, channel, keyframes, bone
+from . import context, frame_markers, controls, channel, keyframes, bone, timings
 from .auto_update import func as auto_update_func
 
 ###############################
 #   Register and Unregister   #
 ###############################
-modules = (bone, frame_markers, keyframes, channel, controls, context)
+modules = (bone, frame_markers, keyframes, channel, controls, timings, context)
 
 @bpy.app.handlers.persistent
 def initialise_panels(self):

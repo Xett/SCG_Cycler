@@ -2,19 +2,14 @@ import bpy
 
 from .interfaces import SCG_Cycler_Context_Interface
 from .auto_update import func as auto_update_func
-from .frame_markers import SCG_Cycler_Frame_Markers
 from .controls import SCG_Cycler_Controls
 from .bone import SCG_Cycler_Bone_Reference
+from .timings import SCG_Cycler_Timing
 
 ###############
 #   Context   #
 ###############
 class SCG_Cycler_Context(bpy.types.PropertyGroup):
-    def get_num_animated_frames(self):
-        return bpy.context.scene.frame_end
-    def set_num_animated_frames(self, value):
-        bpy.context.scene.frame_start = 1
-        bpy.context.scene.frame_end = value
     action : bpy.props.PointerProperty(type=bpy.types.Action, name="Action")
     
     def on_armature_changed(self, context):
@@ -30,11 +25,9 @@ class SCG_Cycler_Context(bpy.types.PropertyGroup):
         self.on_armature_changed(context)
     armature : bpy.props.PointerProperty(type=bpy.types.Armature, name="Armature", update=on_armature_changed)
     valid_armature_bones : bpy.props.CollectionProperty(type=SCG_Cycler_Bone_Reference)
-
-    frame_markers : bpy.props.PointerProperty(type=SCG_Cycler_Frame_Markers)
-    num_animated_frames : bpy.props.IntProperty(name="Number of frames", set=set_num_animated_frames, get=get_num_animated_frames)
     controls : bpy.props.PointerProperty(type=SCG_Cycler_Controls)
     auto_update : bpy.props.BoolProperty()
+    timings : bpy.props.PointerProperty(type=SCG_Cycler_Timing)
     
     def update_ui(self):
         self.controls.remove_panels()
@@ -44,8 +37,12 @@ class SCG_Cycler_Context(bpy.types.PropertyGroup):
         self.controls.update()
 
     @property
+    def num_animated_frames(self):
+        return bpy.context.scene.frame_end
+
+    @property
     def half_point(self):
-        return round(self.num_animated_frames//2)
+        return round(self.num_animated_frames//2)+1
 
 #################
 #   Operators   #
@@ -78,8 +75,6 @@ class SCG_CYCLER_PT_Context_Panel(bpy.types.Panel, SCG_Cycler_Context_Interface)
         row.prop(self.cycler, "action")
         row = self.layout.row()
         row.prop(self.cycler, "armature")
-        row = self.layout.row()
-        row.prop(self.cycler, "num_animated_frames")
 
         row = self.layout.row()
         label = "Enabled" if self.cycler.auto_update else "Disabled"

@@ -5,16 +5,30 @@ from .interfaces import SCG_Cycler_Context_Interface as Context_Interface
 ####################
 #   Frame Marker   #
 ####################
-def update_frame_marker(self, context):
-    bpy.context.scene.scg_cycler_context.frame_markers.update()
-
 class SCG_Cycler_Frame_Marker(bpy.types.PropertyGroup):
+    def update_frame_marker(self, context):
+        bpy.context.scene.scg_cycler_context.frame_markers.update()
+
     # Displayed props
     name : bpy.props.StringProperty(name="Name", update=update_frame_marker)
-    length : bpy.props.IntProperty(name="Marker Length", update=update_frame_marker, default=1, min=1)
+    length : bpy.props.FloatProperty(name="Marker Length", update=update_frame_marker, default=0.0, min=0.0, max=50.0, subtype="PERCENTAGE", step=10.0)
     
     # Displayed as a string, not editable in the ui
-    frame : bpy.props.FloatProperty()
+    def get_frame(self):
+        if "current_frame" in self:
+            return self["current_frame"]
+        else:
+            return 0.0
+    def set_frame(self, value):
+        self["old_frame"] = self.frame
+        self["current_frame"] = value
+    frame : bpy.props.FloatProperty(get=get_frame, set=set_frame)
+
+    @property
+    def old_frame(self):
+        if "old_frame" in self:
+            return self["old_frame"]
+        return 0.0
 
 #########################
 #   Container Wrapper   #
@@ -35,12 +49,13 @@ class SCG_Cycler_Frame_Markers(bpy.types.PropertyGroup, Context_Interface):
 
     def remove(self, index):
         self.markers.remove(index)
+        self.update()
 
     def update(self):
-        frame = 1
-        for marker in self.markers:
+        frame = 0
+        for marker in self.markers:        
             marker.frame = frame
-            frame += marker.length
+            frame += (marker.length/100) * self.cycler.num_animated_frames
 
         bpy.context.scene.timeline_markers.clear()
         for index, marker in enumerate(self.markers):
@@ -48,6 +63,25 @@ class SCG_Cycler_Frame_Markers(bpy.types.PropertyGroup, Context_Interface):
             marker_2 = bpy.context.scene.timeline_markers.new("{0} 2".format(marker.name), frame=marker.frame+self.cycler.half_point-1)
             if index == 0:
                 marker_3 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=self.cycler.num_animated_frames)
+
+    def update_fcurves(self, old_anim_length, old_fps_mode):
+        old_num_frames = old_fps_mode * old_anim_length
+
+        new_anim_length = self.cycler.timings.animation_length
+        new_fps_mode = int(self.cycler.timings.fps_mode)
+        new_num_frames = new_fps_mode * new_anim_length
+
+        if new_num_frames == 0 or old_num_frames == 0:
+            return
+        ratio = new_num_frames / old_num_frames
+
+        for fcurve in self.cycler.action.fcurves:
+            frame_order = sorted(fcurve.keyframe_points, key=lambda x:x.co[0], reverse=True) if old_num_frames < new_num_frames else sorted(fcurve.keyframe_points, key=lambda x:x.co[0], reverse=False)
+            for point in frame_order:
+                old_frame = point.co[0]
+                new_frame = old_frame * ratio
+                point.co[0] = new_frame
+            fcurve.update()
 
 #################
 #   Operators   #
@@ -85,7 +119,7 @@ class SCG_CYCLER_PT_Frame_Markers_Panel(bpy.types.Panel, Context_Interface):
     def draw(self, context):
         row = self.layout.row()
         row.operator("scg_cycler.add_frame_marker")
-        for index, frame_marker in enumerate(self.cycler.frame_markers):
+        for index, frame_marker in enumerate(self.cycler.timings.frame_markers):
             row = self.layout.row()
             row.prop(frame_marker, "name")
             col = row.column()
