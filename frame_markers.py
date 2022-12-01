@@ -7,7 +7,7 @@ from .interfaces import SCG_Cycler_Context_Interface as Context_Interface
 ####################
 class SCG_Cycler_Frame_Marker(bpy.types.PropertyGroup):
     def update_frame_marker(self, context):
-        bpy.context.scene.scg_cycler_context.frame_markers.update()
+        bpy.context.scene.scg_cycler_context.timings.frame_markers.update()
 
     # Displayed props
     name : bpy.props.StringProperty(name="Name", update=update_frame_marker)
@@ -92,7 +92,7 @@ class SCG_CYCLER_OT_Add_Frame_Marker(bpy.types.Operator, Context_Interface):
     bl_description = "Add a new Frame Marker"
 
     def execute(self, context):
-        self.cycler.frame_markers.add()
+        self.cycler.timings.frame_markers.add()
         return {"FINISHED"}
 
 class SCG_CYCLER_OT_Remove_Frame_Marker(bpy.types.Operator, Context_Interface):
@@ -103,7 +103,7 @@ class SCG_CYCLER_OT_Remove_Frame_Marker(bpy.types.Operator, Context_Interface):
     index : bpy.props.IntProperty(name="Index")
 
     def execute(self, context):
-        self.cycler.frame_markers.remove(self.index)
+        self.cycler.timings.frame_markers.remove(self.index)
         return {"FINISHED"}
 
 ######################

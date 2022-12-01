@@ -7,9 +7,9 @@ from .interfaces import SCG_Cycler_Context_Interface as Context_Interface
 ################
 class SCG_Cycler_Control_Channel_Keyframe(bpy.types.PropertyGroup, Context_Interface):
     def get_frame_marker_enum_items(self, context):
-        return [(frame_marker.name.upper(), frame_marker.name, frame_marker.name) for frame_marker in self.cycler.frame_markers]
+        return [(frame_marker.name.upper(), frame_marker.name, frame_marker.name) for frame_marker in self.cycler.timings.frame_markers]
     def frame_marker_update(self, context):
-        for frame_marker in self.cycler.frame_markers:
+        for frame_marker in self.cycler.timings.frame_markers:
             if frame_marker.name.upper() == self.marker.upper():
                 self.__frame_marker__ = frame_marker
                 return
@@ -71,7 +71,7 @@ class SCG_CYCLER_OT_Add_Channel_Keyframe(bpy.types.Operator, Context_Interface):
 
     def execute(self, context):
         markers = [keyframe.marker for keyframe in self.channel]
-        unused_markers = [frame_marker.name.upper() for frame_marker in self.cycler.frame_markers if frame_marker.name.upper() not in markers]
+        unused_markers = [frame_marker.name.upper() for frame_marker in self.cycler.timings.frame_markers if frame_marker.name.upper() not in markers]
         if len(unused_markers)==0: return {"CANCELLED"}
         self.channel.add(unused_markers[0])
         return {"FINISHED"}

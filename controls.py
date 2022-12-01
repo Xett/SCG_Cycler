@@ -102,7 +102,7 @@ class SCG_Cycler_Control(bpy.types.PropertyGroup, Context_Interface, Children_Ha
 
             def draw(self, context):
                 row = self.layout.row()
-                if len(self.cycler.frame_markers) > len(self.channel):
+                if len(self.cycler.timings.frame_markers) > len(self.channel):
                     add_operator = row.operator("scg_cycler.add_channel_keyframe")
                     add_operator.bone_name = self.bone_name
                     add_operator.channel_type = self.channel_type
