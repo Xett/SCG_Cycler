@@ -131,7 +131,7 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
         expected_keyframes = {}
 
         for keyframe in self.keyframes:
-            frame = keyframe.frame_marker.frame + (keyframe.offset*self.cycler.num_animated_frames)
+            frame = keyframe.frame_marker.frame + (round(((keyframe.offset/100)*self.cycler.num_animated_frames)) if keyframe.offset != 0.0 else 0.0)
             for keyframe_point in self.fcurve.keyframe_points:
                 if keyframe_point.co[0] == frame:
                     # We expect the frame in the first half as-is, since it is the copy target
@@ -139,12 +139,12 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
                     if not self.control.mirrored:
                         expected_keyframes[(frame-1)+self.cycler.half_point] = (-keyframe_point.co[1] if keyframe.inverted else keyframe_point.co[1], keyframe_point, frame, keyframe.inverted)
                     # Get first frame marker in the channel instead
-                    if frame==self.keyframes.keyframes[0].frame_marker.frame+(keyframe.offset*self.cycler.num_animated_frames):
+                    if frame==self.keyframes.keyframes[0].frame_marker.frame+(round(((keyframe.offset/100)*self.cycler.num_animated_frames)) if keyframe.offset != 0.0 else 0.0):
                         expected_keyframes[(frame)+self.cycler.num_animated_frames] = (keyframe_point.co[1], keyframe_point, frame, False)
         if self.control.mirrored:
             if self.mirror_channel is not None:
                 for keyframe in self.mirror_channel.keyframes:
-                    frame = keyframe.frame_marker.frame + (keyframe.offset*self.cycler.num_animated_frames)
+                    frame = keyframe.frame_marker.frame + (round(((keyframe.offset/100)*self.cycler.num_animated_frames)) if keyframe.offset != 0.0 else 0.0)
                     for keyframe_point in self.mirror_channel.fcurve.keyframe_points:
                         if keyframe_point.co[0] == frame:
                             if self.type == "LOCATION":

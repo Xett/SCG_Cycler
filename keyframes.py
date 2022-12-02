@@ -14,7 +14,7 @@ class SCG_Cycler_Control_Channel_Keyframe(bpy.types.PropertyGroup, Context_Inter
                 self.__frame_marker__ = frame_marker
                 return
     marker : bpy.props.EnumProperty(name="Frame Marker", items=get_frame_marker_enum_items, update=frame_marker_update)
-    offset : bpy.props.FloatProperty(name="Offset", step=100.0, unit="TIME")
+    offset : bpy.props.FloatProperty(name="Offset", default=0.0, min=0.0, max=50.0, subtype="PERCENTAGE", step=10.0)
     inverted : bpy.props.BoolProperty(name="Inverted")
 
     @property
