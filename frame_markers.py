@@ -74,7 +74,7 @@ class SCG_Cycler_Frame_Markers(bpy.types.PropertyGroup, Context_Interface):
         if new_num_frames == 0 or old_num_frames == 0:
             return
         ratio = new_num_frames / old_num_frames
-
+        self.update()
         for fcurve in self.cycler.action.fcurves:
             frame_order = sorted(fcurve.keyframe_points, key=lambda x:x.co[0], reverse=True) if old_num_frames < new_num_frames else sorted(fcurve.keyframe_points, key=lambda x:x.co[0], reverse=False)
             for point in frame_order:
