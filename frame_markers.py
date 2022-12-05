@@ -17,7 +17,7 @@ class SCG_Cycler_Frame_Marker(bpy.types.PropertyGroup, Context_Interface):
         if "current_length" in self:
             return self["current_length"]
         else:
-            return 12.5
+            return 0.0
     def set_length(self, value):
         #bpy.context.scene.frame_end
         self["old_length"] = self.length
