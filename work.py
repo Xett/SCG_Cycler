@@ -198,8 +198,7 @@ class ResizeAnimationJob(Job):
                 frames = {}
 
                 for index, keyframe in enumerate(channel):
-                    # Need to fix the changes here that use old offset and shit
-                    old_first = round(keyframe.frame_marker.frame + ((keyframe.offset/100)*old_num_frames))
+                    old_first = round(keyframe.frame_marker.old_frame + ((keyframe.offset/100)*old_num_frames))
                     new_first = round(keyframe.frame_marker.frame + ((keyframe.offset/100)*new_num_frames))
                     frames[old_first] = new_first
 
@@ -214,7 +213,7 @@ class ResizeAnimationJob(Job):
 
                 if channel.control.mirrored:
                     for keyframe in channel.mirror_channel:
-                        old_mirror = round(keyframe.frame_marker.frame + ((keyframe.offset/100)*old_num_frames) + old_half_point)
+                        old_mirror = round(keyframe.frame_marker.old_frame + ((keyframe.offset/100)*old_num_frames) + old_half_point)
                         new_mirror = round(keyframe.frame_marker.frame + ((keyframe.offset/100)*new_num_frames) + new_half_point)
                         frames[old_mirror] = new_mirror            
 
