@@ -187,7 +187,7 @@ class ResizeAnimationJob(Job):
         for control in self.cycler.controls:
             for channel in control:
                 if channel.fcurve is None or (channel.control.mirrored and channel.mirror_fcurve is None):
-                    return
+                    continue
 
                 old_num_frames = round(self.old_animation_length * self.old_fps)
                 old_half_point = old_num_frames / 2
