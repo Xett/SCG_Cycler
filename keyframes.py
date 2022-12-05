@@ -1,6 +1,7 @@
 import bpy
 
 from .interfaces import SCG_Cycler_Context_Interface as Context_Interface
+from .work import WorkQueue, UpdateKeyframeOffsetJob
 
 ################
 #   Keyframe   #
@@ -14,7 +15,22 @@ class SCG_Cycler_Control_Channel_Keyframe(bpy.types.PropertyGroup, Context_Inter
                 self.__frame_marker__ = frame_marker
                 return
     marker : bpy.props.EnumProperty(name="Frame Marker", items=get_frame_marker_enum_items, update=frame_marker_update)
-    offset : bpy.props.FloatProperty(name="Offset", default=0.0, min=0.0, max=50.0, subtype="PERCENTAGE", step=10.0)
+
+    def get_offset(self):
+        if not "current_offset" in self:
+            self["current_offset"] = 0.0
+        return self["current_offset"]
+    def set_offset(self, value):
+        if value > 50.0:
+            value = 50.0
+        elif value < 0.0:
+            value = 0.0
+        if value != self.get_offset():
+            self["old_offset"] = self["current_offset"]
+            self["current_offset"] = value
+            WorkQueue().add(UpdateKeyframeOffsetJob(self, self["old_offset"], self["current_offset"]))
+
+    offset : bpy.props.FloatProperty(name="Offset", default=0.0, min=0.0, max=50.0, subtype="PERCENTAGE", step=10.0, get=get_offset, set=set_offset)
     inverted : bpy.props.BoolProperty(name="Inverted")
 
     @property
@@ -22,6 +38,12 @@ class SCG_Cycler_Control_Channel_Keyframe(bpy.types.PropertyGroup, Context_Inter
         if not hasattr(self, "__frame_marker__"):
             self.frame_marker_update(bpy.context)
         return self.__frame_marker__
+
+    @property
+    def old_offset(self):
+        if not "old_offset" in self:
+            self["old_offset"] = 0.0
+        return self["old_offset"]
 
 #################
 #   Keyframes   #
@@ -47,7 +69,7 @@ class SCG_Cycler_Control_Channel_Keyframes(bpy.types.PropertyGroup, Context_Inte
         for keyframe in self.keyframes:
             if keyframe.marker == marker:
                 return keyframe
-        return None            
+        return None
 
 #################
 #   Operators   #

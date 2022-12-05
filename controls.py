@@ -26,7 +26,7 @@ class SCG_Cycler_Control(bpy.types.PropertyGroup, Context_Interface, Children_Ha
             channel.parent_name = self.bone_name
         self.cycler.controls.remove_panels()
         self.cycler.controls.add_panels()
-        self.cycler.update_valid_armature_bones(context)
+        self.cycler.update_valid_armature_bones()
 
     bone_name : bpy.props.StringProperty(name="Bone", update=control_bone_update, set=control_bone_set, get=control_bone_get)
     channels : bpy.props.PointerProperty(type=SCG_Cycler_Control_Channels)
@@ -131,10 +131,6 @@ class SCG_Cycler_Control(bpy.types.PropertyGroup, Context_Interface, Children_Ha
                 new_class = self.create_panel_class(channel_type=type, channel_axis=axis)
                 self.panel_factory.register_new_panel(panel_id, new_class)
 
-    def update(self):
-        for channel in self:
-            channel.update()
-
 ################
 #   Controls   #
 ################
@@ -151,6 +147,7 @@ class SCG_Cycler_Controls(bpy.types.PropertyGroup, Context_Interface, Children_H
         control = self.controls.add()
         current_bone_names = [control.bone_name for control in self]
         for bone in self.cycler.armature.bones:
+            # Only adding valid bones, via the name, this kinda needs to be done as a whitelist, and this is implemented in other places too, which is kinda bad lol
             if bone.name not in current_bone_names and "ORG" not in bone.name and "DEF" not in bone.name and "MCH" not in bone.name and "f_" != bone.name[:2] and "_master" not in bone.name:
                 control.bone_name = bone.name
                 break
@@ -215,19 +212,17 @@ class SCG_Cycler_Controls(bpy.types.PropertyGroup, Context_Interface, Children_H
                 remove.index = self.index
         return ControlPanel
 
+    # Handles adding missing panels
     def add_panels(self):
         super().add_panels()
         for control in self:
             control.add_panels()
 
+    # Remove invalid panels
     def remove_panels(self):
         super().remove_panels()
         for control in self:
             control.remove_panels()
-
-    def update(self):
-        for control in self:
-            control.update()
 
 ######################
 #   User Interface   #

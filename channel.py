@@ -19,7 +19,7 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
         if self.mirror_channel is None:
             return
         for fcurve in self.cycler.action.fcurves:
-            if self.mirror_channel.data_path in fcurve.data_path:
+            if self.mirror_channel.data_path == fcurve.data_path and self.array_index == fcurve.array_index:
                 self.__mirror_fcurve__ = fcurve
                 return
 
@@ -124,136 +124,7 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
     def mirror_fcurve(self):
         if not hasattr(self, "__mirror_fcurve__"):
             self.update_mirror_fcurve()
-        return self.__mirror_fcurve__ if hasattr(self, "__mirror_fcurve__") else None
-
-    @property
-    def expected_keyframes(self):
-        expected_keyframes = {}
-
-        for keyframe in self.keyframes:
-            frame = keyframe.frame_marker.frame + (round(((keyframe.offset/100)*self.cycler.num_animated_frames)) if keyframe.offset != 0.0 else 0.0)
-            for keyframe_point in self.fcurve.keyframe_points:
-                if keyframe_point.co[0] == frame:
-                    # We expect the frame in the first half as-is, since it is the copy target
-                    expected_keyframes[frame] = (keyframe_point.co[1], keyframe_point, frame, False)
-                    if not self.control.mirrored:
-                        expected_keyframes[(frame-1)+self.cycler.half_point] = (-keyframe_point.co[1] if keyframe.inverted else keyframe_point.co[1], keyframe_point, frame, keyframe.inverted)
-                    # Get first frame marker in the channel instead
-                    if frame==self.keyframes.keyframes[0].frame_marker.frame+(round(((keyframe.offset/100)*self.cycler.num_animated_frames)) if keyframe.offset != 0.0 else 0.0):
-                        expected_keyframes[(frame)+self.cycler.num_animated_frames] = (keyframe_point.co[1], keyframe_point, frame, False)
-        if self.control.mirrored:
-            if self.mirror_channel is not None:
-                for keyframe in self.mirror_channel.keyframes:
-                    frame = keyframe.frame_marker.frame + (round(((keyframe.offset/100)*self.cycler.num_animated_frames)) if keyframe.offset != 0.0 else 0.0)
-                    for keyframe_point in self.mirror_channel.fcurve.keyframe_points:
-                        if keyframe_point.co[0] == frame:
-                            if self.type == "LOCATION":
-                                expected_keyframes[(frame-1)+self.cycler.half_point] = (-keyframe_point.co[1] if self.axis == "X" else keyframe_point.co[1], keyframe_point, frame, False)
-                            elif self.type == "ROTATION_EULER":
-                                expected_keyframes[(frame-1)+self.cycler.half_point] = (-keyframe_point.co[1] if self.axis in "YZ" else keyframe_point.co[1], keyframe_point, frame, False)
-                            else:
-                                expected_keyframes[(frame-1)+self.cycler.half_point] = (keyframe_point.co[1], keyframe_point, frame, False)
-            
-        return expected_keyframes
-
-    def update(self):        
-        # Can't do anything if we need fcurves and can't find them
-        if self.fcurve is None or (self.control.mirrored and self.mirror_fcurve is None):
-            return
-
-        expected_keyframes = self.expected_keyframes
-
-        # Insert a new frame if it doesn't exist, but we expect it to. Change values if it does already exist
-        current_keyframes = [keyframe_point.co[0] for keyframe_point in self.fcurve.keyframe_points]
-        for frame, value in expected_keyframes.items():
-            if frame not in current_keyframes:
-                new_keyframe_point = self.fcurve.keyframe_points.insert(frame, value[0])
-                new_keyframe_point.amplitude = value[1].amplitude
-                new_keyframe_point.back = value[1].back
-                new_keyframe_point.easing = value[1].easing
-                new_keyframe_point.handle_left_type = value[1].handle_left_type
-                new_keyframe_point.handle_right_type = value[1].handle_right_type
-                if value[3] and frame >= self.cycler.half_point and frame < self.cycler.num_animated_frames and not self.control.mirrored:
-                    new_keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
-                    new_keyframe_point.handle_left[1] = -value[1].handle_left[1]
-                    new_keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
-                    new_keyframe_point.handle_right[1] = -value[1].handle_right[1]
-                elif self.control.mirrored and frame >= self.cycler.half_point and frame < self.cycler.num_animated_frames:
-                    if self.type == "LOCATION" and self.axis=="X":
-                        keyframe_point.handle_left_type = value[1].handle_left_type
-                        keyframe_point.handle_right_type = value[1].handle_right_type
-                        keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
-                        keyframe_point.handle_left[1] = -value[1].handle_left[1]
-                        keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
-                        keyframe_point.handle_right[1] = -value[1].handle_right[1]
-                    elif self.type=="ROTATION_EULER" and self.axis in "YZ":
-                        keyframe_point.handle_left_type = value[1].handle_left_type
-                        keyframe_point.handle_right_type = value[1].handle_right_type
-                        keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
-                        keyframe_point.handle_left[1] = -value[1].handle_left[1]
-                        keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
-                        keyframe_point.handle_right[1] = -value[1].handle_right[1]
-                else:
-                    new_keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
-                    new_keyframe_point.handle_left[1] = value[1].handle_left[1]
-                    new_keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
-                    new_keyframe_point.handle_right[1] = value[1].handle_right[1]
-                new_keyframe_point.interpolation = value[1].interpolation
-                new_keyframe_point.period = value[1].period
-                new_keyframe_point.type = value[1].type
-            else:
-                for keyframe_point in self.fcurve.keyframe_points:
-                    if keyframe_point.co[0] == frame:
-                        keyframe_point.co[1] = value[0]
-                        keyframe_point.amplitude = value[1].amplitude
-                        keyframe_point.back = value[1].back
-                        keyframe_point.easing = value[1].easing
-                        if self.control.mirrored:
-                            if self.type == "LOCATION" and self.axis=="X":
-                                keyframe_point.handle_left_type = value[1].handle_left_type
-                                keyframe_point.handle_right_type = value[1].handle_right_type
-                                keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
-                                keyframe_point.handle_left[1] = -value[1].handle_left[1]
-                                keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
-                                keyframe_point.handle_right[1] = -value[1].handle_right[1]
-                            elif self.type=="ROTATION_EULER" and self.axis in "YZ":
-                                keyframe_point.handle_left_type = value[1].handle_left_type
-                                keyframe_point.handle_right_type = value[1].handle_right_type
-                                keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
-                                keyframe_point.handle_left[1] = -value[1].handle_left[1]
-                                keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
-                                keyframe_point.handle_right[1] = -value[1].handle_right[1]
-                        else:
-                            if value[3]:
-                                keyframe_point.handle_left_type = value[1].handle_left_type
-                                keyframe_point.handle_right_type = value[1].handle_right_type
-                                keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
-                                keyframe_point.handle_left[1] = -value[1].handle_left[1]
-                                keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
-                                keyframe_point.handle_right[1] = -value[1].handle_right[1]
-                            else:
-                                keyframe_point.handle_left_type = value[1].handle_left_type
-                                keyframe_point.handle_right_type = value[1].handle_right_type
-                                keyframe_point.handle_left[0] = (value[1].handle_left[0]-value[2])+frame
-                                keyframe_point.handle_left[1] = value[1].handle_left[1]
-                                keyframe_point.handle_right[0] = (value[1].handle_right[0]-value[2])+frame
-                                keyframe_point.handle_right[1] = value[1].handle_right[1]
-                        keyframe_point.interpolation = value[1].interpolation
-                        keyframe_point.period = value[1].period
-                        keyframe_point.type = value[1].type
-                        break
-            self.fcurve.update()
-
-        # Iterate through the keyframes to delete, find the keyframe, remove it and break out of finding it
-        frames_to_delete = []
-        for keyframe_point in self.fcurve.keyframe_points:
-            if keyframe_point.co[0] not in expected_keyframes:
-                frames_to_delete.append(keyframe_point.co[0])
-        for frame in frames_to_delete:
-            for keyframe_point in self.fcurve.keyframe_points:
-                if keyframe_point.co[0] == frame:
-                    self.fcurve.keyframe_points.remove(keyframe_point)
-                    
+        return self.__mirror_fcurve__ if hasattr(self, "__mirror_fcurve__") else None                   
 
 ################
 #   Channels   #

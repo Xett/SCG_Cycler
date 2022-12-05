@@ -1,7 +1,7 @@
 import bpy
 
 from .interfaces import SCG_Cycler_Context_Interface
-from .auto_update import func as auto_update_func
+from .work import work_tick
 from .controls import SCG_Cycler_Controls
 from .bone import SCG_Cycler_Bone_Reference
 from .timings import SCG_Cycler_Timing
@@ -9,40 +9,41 @@ from .timings import SCG_Cycler_Timing
 ###############
 #   Context   #
 ###############
+
+# Root property inside of the context scene, to hold all our plugin data.
+# There is an interface to access this as self.cycler
 class SCG_Cycler_Context(bpy.types.PropertyGroup):
     action : bpy.props.PointerProperty(type=bpy.types.Action, name="Action")
     
-    def on_armature_changed(self, context):
+    # When the armature is changed, we need to update the valid armature bones
+    def armature_changed_update(self, context):
+        self.update_valid_armature_bones()
+        
+    armature : bpy.props.PointerProperty(type=bpy.types.Armature, name="Armature", update=armature_changed_update)
+
+    def update_valid_armature_bones(self):
+        # Clear the valid armature bones, cause its easier than adding valid ones not there, and removing invalid ones
         self.valid_armature_bones.clear()
+        # If there is no armature, then we have no valid armature bones
         if not self.armature:
             return
         for bone in self.armature.bones:
+            # Valid bones are mostly found by name, there are still a bunch missing, it would be prefarable to have some kind of whitelist for bones in a rig
             if "ORG" not in bone.name and "DEF" not in bone.name and "MCH" not in bone.name and "_master" not in bone.name and "VIS" not in bone.name and "_target" not in bone.name and bone.name not in [control.bone_name for control in self.controls]:
+                # Make a new bone, and set its name
                 new_bone = self.valid_armature_bones.add()
                 new_bone.name = bone.name
-
-    def update_valid_armature_bones(self, context):
-        self.on_armature_changed(context)
-    armature : bpy.props.PointerProperty(type=bpy.types.Armature, name="Armature", update=on_armature_changed)
     valid_armature_bones : bpy.props.CollectionProperty(type=SCG_Cycler_Bone_Reference)
+    
     controls : bpy.props.PointerProperty(type=SCG_Cycler_Controls)
     auto_update : bpy.props.BoolProperty()
     timings : bpy.props.PointerProperty(type=SCG_Cycler_Timing)
     
     def update_ui(self):
+        # Remove invalid panels
         self.controls.remove_panels()
+        # Add missing panels
         self.controls.add_panels()
-
-    def update(self):
-        self.controls.update()
-
-    @property
-    def num_animated_frames(self):
-        return bpy.context.scene.frame_end
-
-    @property
-    def half_point(self):
-        return round(self.num_animated_frames//2)+1
 
 #################
 #   Operators   #
@@ -55,9 +56,9 @@ class SCG_CYCLER_OT_Toggle_Auto_Update(bpy.types.Operator, SCG_Cycler_Context_In
     def execute(self, context):
         self.cycler.auto_update = not self.cycler.auto_update
         if self.cycler.auto_update:
-            bpy.app.timers.register(auto_update_func)
+            bpy.app.timers.register(work_tick)
         else:
-            bpy.app.timers.unregister(auto_update_func)
+            bpy.app.timers.unregister(work_tick)
         return {"FINISHED"}
 
 ######################
