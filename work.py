@@ -148,6 +148,8 @@ class ChangeKeyframeValueJob(Job):
         if self.type is not None:
             self.keyframe.type = self.type
 
+# Call this after making changes to an FCurve to update it, needs to manually be done
+# otherwise we would be calling it after every change which isn't needed
 class UpdateFCurveJob(Job):
     def __init__(self, fcurve):
         Job.__init__(self, "UPDATE_FCURVE")
@@ -156,6 +158,7 @@ class UpdateFCurveJob(Job):
     def work(self):
         self.fcurve.update()         
 
+# Called when FPS changed, or Animation Length is changed
 class ResizeAnimationJob(Job):
     def __init__(self, old_animation_length, new_animation_length, old_fps, new_fps):
         Job.__init__(self, "RESIZE_ANIMATION")

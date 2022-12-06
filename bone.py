@@ -3,6 +3,9 @@ import bpy
 ######################
 #   Bone Reference   #
 ######################
+
+# Right now, this is just a container of a name for the bone
+# This is used by the valid armature bones collection
 class SCG_Cycler_Bone_Reference(bpy.types.PropertyGroup):
     name : bpy.props.StringProperty()
 
