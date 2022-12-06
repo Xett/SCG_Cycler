@@ -57,12 +57,10 @@ class SCG_Cycler_Frame_Markers(bpy.types.PropertyGroup, Context_Interface):
 
     def add(self):
         marker = self.markers.add()
-        self.update()
         return marker
 
     def remove(self, index):
         self.markers.remove(index)
-        self.update()
 
 #################
 #   Operators   #
@@ -87,34 +85,10 @@ class SCG_CYCLER_OT_Remove_Frame_Marker(bpy.types.Operator, Context_Interface):
         self.cycler.timings.frame_markers.remove(self.index)
         return {"FINISHED"}
 
-######################
-#   User Interface   #
-######################
-class SCG_CYCLER_PT_Frame_Markers_Panel(bpy.types.Panel, Context_Interface):
-    bl_idname = "SCG_CYCLER_PT_Frame_Markers_Panel"
-    bl_label = "Frame Markers"
-    bl_category = "SCG Cycler"
-    bl_space_type = "VIEW_3D"
-    bl_region_type = "UI"
-
-    def draw(self, context):
-        row = self.layout.row()
-        row.operator("scg_cycler.add_frame_marker")
-        for index, frame_marker in enumerate(self.cycler.timings.frame_markers):
-            row = self.layout.row()
-            row.prop(frame_marker, "name")
-            col = row.column()
-            col.prop(frame_marker, "length")
-            col = row.column()
-            col.label(text="Frame: {0}".format(frame_marker.frame))
-            col = row.column()
-            remove_op=col.operator("scg_cycler.remove_frame_marker")
-            remove_op.index = index
-
 ###############################
 #   Register and Unregister   #
 ###############################
-classes = (SCG_Cycler_Frame_Marker, SCG_Cycler_Frame_Markers, SCG_CYCLER_OT_Add_Frame_Marker, SCG_CYCLER_OT_Remove_Frame_Marker, SCG_CYCLER_PT_Frame_Markers_Panel)
+classes = (SCG_Cycler_Frame_Marker, SCG_Cycler_Frame_Markers, SCG_CYCLER_OT_Add_Frame_Marker, SCG_CYCLER_OT_Remove_Frame_Marker)
 
 def register():
     from bpy.utils import register_class

@@ -37,6 +37,20 @@ class SCG_CYCLER_PT_Timings_Panel(bpy.types.Panel, Context_Interface):
         row.prop(self.cycler.timings, "fps_mode")
         row = self.layout.row()
         row.prop(self.cycler.timings, "animation_length")
+        row = self.layout.row()
+        box = row.box()
+        row = box.row()
+        row.operator("scg_cycler.add_frame_marker")
+        for index, frame_marker in enumerate(self.cycler.timings.frame_markers):
+            row = box.row()
+            row.prop(frame_marker, "name")
+            col = row.column()
+            col.prop(frame_marker, "length")
+            col = row.column()
+            col.label(text="Frame: {0}".format(frame_marker.frame))
+            col = row.column()
+            remove_op=col.operator("scg_cycler.remove_frame_marker")
+            remove_op.index = index
 
 
 ###############################
