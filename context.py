@@ -3,7 +3,7 @@ import bpy
 from .interfaces import SCG_Cycler_Context_Interface
 from .work import work_tick
 from .controls import SCG_Cycler_Controls
-from .bone import SCG_Cycler_Bone_Reference
+from .bone import SCG_Cycler_Bone_Reference, SCG_Cycler_Rig_Bones
 from .timings import SCG_Cycler_Timing
 
 ###############
@@ -17,27 +17,29 @@ class SCG_Cycler_Context(bpy.types.PropertyGroup):
     
     # When the armature is changed, we need to update the valid armature bones
     def armature_changed_update(self, context):
-        self.update_valid_armature_bones()
+        #self.update_valid_armature_bones()
+        self.rig_bones.armature_changed()
         
     armature : bpy.props.PointerProperty(type=bpy.types.Armature, name="Armature", update=armature_changed_update)
 
-    def update_valid_armature_bones(self):
-        # Clear the valid armature bones, cause its easier than adding valid ones not there, and removing invalid ones
-        self.valid_armature_bones.clear()
-        # If there is no armature, then we have no valid armature bones
-        if not self.armature:
-            return
-        for bone in self.armature.bones:
-            # Valid bones are mostly found by name, there are still a bunch missing, it would be prefarable to have some kind of whitelist for bones in a rig
-            if "ORG" not in bone.name and "DEF" not in bone.name and "MCH" not in bone.name and "_master" not in bone.name and "VIS" not in bone.name and "_target" not in bone.name and bone.name not in [control.bone_name for control in self.controls]:
-                # Make a new bone, and set its name
-                new_bone = self.valid_armature_bones.add()
-                new_bone.name = bone.name
+    #def update_valid_armature_bones(self):
+    #    # Clear the valid armature bones, cause its easier than adding valid ones not there, and removing invalid ones
+    #    self.valid_armature_bones.clear()
+    #    # If there is no armature, then we have no valid armature bones
+    #    if not self.armature:
+    #        return
+    #    for bone in self.armature.bones:
+    #        # Valid bones are mostly found by name, there are still a bunch missing, it would be prefarable to have some kind of whitelist for bones in a rig
+    #        if "ORG" not in bone.name and "DEF" not in bone.name and "MCH" not in bone.name and "_master" not in bone.name and "VIS" not in bone.name and "_target" not in bone.name and bone.name not in [control.bone_name for control in self.controls]:
+    #            # Make a new bone, and set its name
+    #            new_bone = self.valid_armature_bones.add()
+    #            new_bone.name = bone.name
     valid_armature_bones : bpy.props.CollectionProperty(type=SCG_Cycler_Bone_Reference)
     
     controls : bpy.props.PointerProperty(type=SCG_Cycler_Controls)
     auto_update : bpy.props.BoolProperty()
     timings : bpy.props.PointerProperty(type=SCG_Cycler_Timing)
+    rig_bones : bpy.props.PointerProperty(type=SCG_Cycler_Rig_Bones)
     
     def update_ui(self):
         # Remove invalid panels

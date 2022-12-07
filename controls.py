@@ -203,7 +203,7 @@ class SCG_Cycler_Controls(bpy.types.PropertyGroup, Context_Interface, Children_H
                 row = self.layout.row()
                 if self.control is None:
                     return
-                row.prop_search(self.control, "bone_name", self.cycler, "valid_armature_bones")
+                row.prop_search(self.control, "bone_name", self.cycler.rig_bones, "whitelist")
                 if self.control.mirrors:
                     col = row.column()
                     col.prop(self.control, "mirrored")
