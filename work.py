@@ -103,8 +103,8 @@ class MoveKeyframeJob(Job):
         old_pos = self.keyframe.co[0]
         difference = self.new_frame - old_pos
         self.keyframe.co[0] = self.new_frame
-        self.keyframe.handle_left[0] + difference
-        self.keyframe.handle_right[0] + difference
+        self.keyframe.handle_left[0] += difference
+        self.keyframe.handle_right[0] += difference
 
 # Changes the value of a keyframe
 class ChangeKeyframeValueJob(Job):
@@ -178,8 +178,8 @@ class ResizeAnimationJob(Job):
 
         bpy.context.scene.timeline_markers.clear()
         for index, marker in enumerate(self.cycler.timings.frame_markers):
-            marker_1 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=marker.frame)
-            marker_2 = bpy.context.scene.timeline_markers.new("{0} 2".format(marker.name), frame=marker.frame+half_point)
+            marker_1 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=round(marker.frame))
+            marker_2 = bpy.context.scene.timeline_markers.new("{0} 2".format(marker.name), frame=round(marker.frame+half_point))
             if index == 0:
                 marker_3 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=num_animated_frames)
 
