@@ -42,13 +42,8 @@ class SCG_Cycler_Rig_Bones(bpy.types.PropertyGroup, Context_Interface):
     whitelist_current_index : bpy.props.IntProperty()
     blacklist_current_index : bpy.props.IntProperty()
 
-    @property
-    def whitelist_paths(self):
-        return bpy.context.preferences.addons[__package__].preferences.whitelist_paths
-    whitelists : bpy.props.CollectionProperty(type=SCG_Cycler_Whitelist)
-
     def current_whitelist_name_updated(self, context):
-        for whitelist in self.whitelists:
+        for whitelist in self.cycler.rig_bone_whitelists.whitelists:
             if whitelist.name == self.current_whitelist_name:
                 self.armature_changed()
                 for bone in whitelist.bones:
@@ -84,8 +79,14 @@ class SCG_Cycler_Rig_Bones(bpy.types.PropertyGroup, Context_Interface):
             new_bone = self.blacklist.add()
             new_bone.name = bone_name
 
+class SCG_Cycler_Rig_Bone_Whitelists(bpy.types.PropertyGroup, Context_Interface):
+    @property
+    def whitelist_paths(self):
+        return bpy.context.preferences.addons[__package__].preferences.whitelist_paths
+    whitelists : bpy.props.CollectionProperty(type=SCG_Cycler_Whitelist)
+
     def search_for_whitelists(self):
-        self.cycler.rig_bones.whitelists.clear()
+        self.cycler.rig_bone_whitelists.whitelists.clear()
         for whitelist_path in self.whitelist_paths:
             directory = os.fsencode(whitelist_path.path)
             for file in os.listdir(directory):
@@ -106,7 +107,7 @@ class SCG_Cycler_Rig_Bones(bpy.types.PropertyGroup, Context_Interface):
         whitelists = json_data["whitelists"]
         for whitelist, data in whitelists.items():
             if not whitelist in [whitelist.name for whitelist in self.whitelists]:
-                new_whitelist = self.cycler.rig_bones.whitelists.add()
+                new_whitelist = self.cycler.rig_bone_whitelists.whitelists.add()
                 new_whitelist.name = whitelist
                 for bone in data:
                     new_bone = new_whitelist.bones.add()
@@ -130,15 +131,6 @@ class SCG_Cycler_Rig_Bones(bpy.types.PropertyGroup, Context_Interface):
         data = json.loads(data_string)
         data["whitelists"][whitelist.name] = whitelist.bone_names            
         bpy.data.texts["rig_whitelists"].from_string(json.dumps(data))
-
-    def add_current_to_data(self):
-        if not "rig_whitelists" in bpy.data.texts:
-            self.create_rig_whitelists_data()
-        data_string = bpy.data.texts["rig_whitelists"].as_string()
-        data = json.loads(data_string)
-        data["whitelists"][self.current_whitelist_name] = self.whitelist_names 
-        bpy.data.texts["rig_whitelists"].from_string(json.dumps(data))
-
 
 #################
 #   Operators   #
@@ -191,7 +183,7 @@ class SCG_CYCLER_OT_Add_Whitelist_Path(bpy.types.Operator, Context_Interface):
     bl_description = "Add a new path to search for rig bone whitelists in"
 
     def execute(self, context):
-        self.cycler.rig_bones.whitelist_paths.add()
+        bpy.context.preferences.addons[__package__].preferences.whitelist_paths.add()
         return {"FINISHED"}
 
 class SCG_CYCLER_OT_Remove_Whitelist_Path(bpy.types.Operator, Context_Interface):
@@ -202,7 +194,7 @@ class SCG_CYCLER_OT_Remove_Whitelist_Path(bpy.types.Operator, Context_Interface)
     index : bpy.props.IntProperty()
 
     def execute(self, context):
-        self.cycler.rig_bones.whitelist_paths.remove(self.index)
+        bpy.context.preferences.addons[__package__].preferences.whitelist_paths.remove(self.index)
         return {"FINISHED"}
 
 class SCG_CYCLER_OT_Refresh_Whitelists(bpy.types.Operator, Context_Interface):
@@ -211,7 +203,7 @@ class SCG_CYCLER_OT_Refresh_Whitelists(bpy.types.Operator, Context_Interface):
     bl_description = "Refreshes the current Whitelists"
 
     def execute(self, context):
-        self.cycler.rig_bones.search_for_whitelists()
+        self.cycler.rig_bone_whitelists.search_for_whitelists()
         return {"FINISHED"}
 
 class SCG_CYCLER_OT_Save_Whitelist(bpy.types.Operator, Context_Interface):
@@ -222,7 +214,10 @@ class SCG_CYCLER_OT_Save_Whitelist(bpy.types.Operator, Context_Interface):
     def execute(self, context):
         if self.cycler.rig_bones.current_whitelist_name == "":
             return {"CANCELLED"}
-        self.cycler.rig_bones.add_current_to_data()
+        
+        for whitelist in self.cycler.rig_bone_whitelists:
+            if whitelist.name == self.cycler.rig_bones.current_whitelist_name:
+                self.cycler.rig_bone_whitelists.add_whitelist_to_data(whitelist)
         return {"FINISHED"}
 
 ######################
@@ -239,12 +234,16 @@ class SCG_CYCLER_PT_Rig_Bones_Panel(bpy.types.Panel, Context_Interface):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
 
+    @classmethod
+    def poll(cls, context):
+        return not bpy.context.scene.scg_cycler_context.rig_bones is None
+
     def draw(self, context):
         self.layout.row().operator("scg_cycler.refresh_whitelists")
 
         whitelist_row = self.layout.row()
         whitelist_row.prop(self.cycler.rig_bones, "current_whitelist_name")
-        whitelist_row.prop_search(self.cycler.rig_bones, "current_whitelist_name", self.cycler.rig_bones, "whitelists", results_are_suggestions=True)
+        whitelist_row.prop_search(self.cycler.rig_bones, "current_whitelist_name", self.cycler.rig_bone_whitelists, "whitelists", results_are_suggestions=True)
         column = whitelist_row.column()
         column.operator("scg_cycler.save_whitelist")
         main_row = self.layout.row()
@@ -270,7 +269,7 @@ class SCG_CYCLER_PT_Rig_Bones_Panel(bpy.types.Panel, Context_Interface):
 ###############################
 #   Register and Unregister   #
 ###############################
-classes = (SCG_Cycler_Bone_Reference, SCG_Cycler_Whitelist_Path, SCG_Cycler_Whitelist, SCG_Cycler_Rig_Bones, SCG_CYCLER_OT_Whitelist_Bone, SCG_CYCLER_OT_Blacklist_Bone, SCG_CYCLER_OT_Add_Whitelist_Path, SCG_CYCLER_OT_Remove_Whitelist_Path, SCG_CYCLER_OT_Refresh_Whitelists, SCG_CYCLER_OT_Save_Whitelist, SCG_CYCLER_UL_Bone_List, SCG_CYCLER_PT_Rig_Bones_Panel)
+classes = (SCG_Cycler_Bone_Reference, SCG_Cycler_Whitelist_Path, SCG_Cycler_Whitelist, SCG_Cycler_Rig_Bones, SCG_Cycler_Rig_Bone_Whitelists, SCG_CYCLER_OT_Whitelist_Bone, SCG_CYCLER_OT_Blacklist_Bone, SCG_CYCLER_OT_Add_Whitelist_Path, SCG_CYCLER_OT_Remove_Whitelist_Path, SCG_CYCLER_OT_Refresh_Whitelists, SCG_CYCLER_OT_Save_Whitelist, SCG_CYCLER_UL_Bone_List, SCG_CYCLER_PT_Rig_Bones_Panel)
 
 def register():
     from bpy.utils import register_class

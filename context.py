@@ -2,9 +2,8 @@ import bpy
 
 from .interfaces import SCG_Cycler_Context_Interface
 from .work import work_tick
-from .controls import SCG_Cycler_Controls
-from .bone import SCG_Cycler_Bone_Reference, SCG_Cycler_Rig_Bones
-from .timings import SCG_Cycler_Timing
+from .rig_actions import SCG_Cycler_Rig_Actions
+from .bone import SCG_Cycler_Rig_Bone_Whitelists
 
 ###############
 #   Context   #
@@ -13,39 +12,40 @@ from .timings import SCG_Cycler_Timing
 # Root property inside of the context scene, to hold all our plugin data.
 # There is an interface to access this as self.cycler
 class SCG_Cycler_Context(bpy.types.PropertyGroup):
-    action : bpy.props.PointerProperty(type=bpy.types.Action, name="Action")
-    
-    # When the armature is changed, we need to update the valid armature bones
-    def armature_changed_update(self, context):
-        #self.update_valid_armature_bones()
-        self.rig_bones.armature_changed()
-        
-    armature : bpy.props.PointerProperty(type=bpy.types.Armature, name="Armature", update=armature_changed_update)
-
-    #def update_valid_armature_bones(self):
-    #    # Clear the valid armature bones, cause its easier than adding valid ones not there, and removing invalid ones
-    #    self.valid_armature_bones.clear()
-    #    # If there is no armature, then we have no valid armature bones
-    #    if not self.armature:
-    #        return
-    #    for bone in self.armature.bones:
-    #        # Valid bones are mostly found by name, there are still a bunch missing, it would be prefarable to have some kind of whitelist for bones in a rig
-    #        if "ORG" not in bone.name and "DEF" not in bone.name and "MCH" not in bone.name and "_master" not in bone.name and "VIS" not in bone.name and "_target" not in bone.name and bone.name not in [control.bone_name for control in self.controls]:
-    #            # Make a new bone, and set its name
-    #            new_bone = self.valid_armature_bones.add()
-    #            new_bone.name = bone.name
-    valid_armature_bones : bpy.props.CollectionProperty(type=SCG_Cycler_Bone_Reference)
-    
-    controls : bpy.props.PointerProperty(type=SCG_Cycler_Controls)
+    rig_actions : bpy.props.PointerProperty(type=SCG_Cycler_Rig_Actions)    
     auto_update : bpy.props.BoolProperty()
-    timings : bpy.props.PointerProperty(type=SCG_Cycler_Timing)
-    rig_bones : bpy.props.PointerProperty(type=SCG_Cycler_Rig_Bones)
-    
+    rig_bone_whitelists : bpy.props.PointerProperty(type=SCG_Cycler_Rig_Bone_Whitelists)
+
+    @property
+    def rig_action(self):
+        return self.rig_actions.rig_action
+
+    @property
+    def action(self):
+        if self.rig_action is None:
+            return None
+        return self.rig_action.action
+
+    @property
+    def armature(self):
+        if self.rig_action is None:
+            return None
+        return self.rig_action.armature
+
+    @property
+    def timings(self):
+        if self.rig_action is None:
+            return None
+        return self.rig_action.timings
+
+    @property
+    def rig_bones(self):
+        if self.rig_action is None:
+            return None
+        return self.rig_action.rig_bones
+
     def update_ui(self):
-        # Remove invalid panels
-        self.controls.remove_panels()
-        # Add missing panels
-        self.controls.add_panels()
+        self.rig_actions.update_ui()
 
 #################
 #   Operators   #
@@ -74,10 +74,14 @@ class SCG_CYCLER_PT_Context_Panel(bpy.types.Panel, SCG_Cycler_Context_Interface)
     bl_region_type = "UI"
 
     def draw(self, context):
-        row = self.layout.row()
-        row.prop(self.cycler, "action")
-        row = self.layout.row()
-        row.prop(self.cycler, "armature")
+        self.layout.row().operator("scg_cycler.add_rig_action")
+        self.layout.row().prop_search(self.cycler.rig_actions, "current_rig_action_name", self.cycler.rig_actions, "rig_actions")
+        if not self.cycler.rig_action is None:
+            row = self.layout.row()
+            row.prop(self.cycler.rig_action, "action")
+        if not self.cycler.rig_action is None:
+            row = self.layout.row()
+            row.prop(self.cycler.rig_action, "armature")
 
         row = self.layout.row()
         label = "Enabled" if self.cycler.auto_update else "Disabled"

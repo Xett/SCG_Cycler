@@ -19,14 +19,14 @@ class SCG_Cycler_Control(bpy.types.PropertyGroup, Context_Interface, Children_Ha
         elif "MCH" in value: return
         elif "f_" == value[:2]: return
         elif "_master" in value: return
-        elif value in [control.bone_name for control in self.cycler.controls if self.bone_name != value]: return
+        elif value in [control.bone_name for control in self.cycler.rig_action.controls if self.bone_name != value]: return
         self["bone_name"] = value
     def control_bone_update(self, context):
         for channel in self:
             channel.parent_name = self.bone_name
-        self.cycler.controls.remove_panels()
-        self.cycler.controls.add_panels()
-        self.cycler.update_valid_armature_bones()
+        self.cycler.rig_action.controls.remove_panels()
+        self.cycler.rig_action.controls.add_panels()
+        #self.cycler.update_valid_armature_bones()
 
     bone_name : bpy.props.StringProperty(name="Bone", update=control_bone_update, set=control_bone_set, get=control_bone_get)
     channels : bpy.props.PointerProperty(type=SCG_Cycler_Control_Channels)
@@ -94,7 +94,7 @@ class SCG_Cycler_Control(bpy.types.PropertyGroup, Context_Interface, Children_Ha
 
             @property
             def control(self):
-                return self.cycler.controls.get(self.bone_name)
+                return self.cycler.rig_action.controls.get(self.bone_name)
 
             @property
             def channel(self):
@@ -190,11 +190,11 @@ class SCG_Cycler_Controls(bpy.types.PropertyGroup, Context_Interface, Children_H
 
             @property
             def control(self):
-                return self.cycler.controls.get(self.bone_name)
+                return self.cycler.rig_action.controls.get(self.bone_name)
 
             @property
             def index(self):
-                for index, control in enumerate(self.cycler.controls):
+                for index, control in enumerate(self.cycler.rig_action.controls):
                     if control.bone_name == self.bone_name:
                         return index
                 return None
@@ -251,7 +251,7 @@ class SCG_CYCLER_OT_Add_Control(bpy.types.Operator, Context_Interface):
     bl_description = "Add a new Control"
 
     def execute(self, context):
-        self.cycler.controls.add()
+        self.cycler.rig_action.controls.add()
         return {"FINISHED"}
 
 class SCG_CYCLER_OT_Remove_Control(bpy.types.Operator, Context_Interface):
@@ -262,7 +262,7 @@ class SCG_CYCLER_OT_Remove_Control(bpy.types.Operator, Context_Interface):
     index : bpy.props.IntProperty(name="Index")
 
     def execute(self, context):
-        self.cycler.controls.remove(self.index)
+        self.cycler.rig_action.controls.remove(self.index)
         return {"FINISHED"}
 
 ###############################

@@ -85,7 +85,7 @@ class SCG_CYCLER_OT_Add_Channel_Keyframe(bpy.types.Operator, Context_Interface):
 
     @property
     def control(self):
-        return self.cycler.controls.get(self.bone_name)
+        return self.cycler.rig_action.controls.get(self.bone_name)
 
     @property
     def channel(self):
@@ -111,7 +111,7 @@ class SCG_CYCLER_OT_Remove_Channel_Keyframe(bpy.types.Operator, Context_Interfac
 
     @property
     def control(self):
-        return self.cycler.controls.get(self.bone_name)
+        return self.cycler.rig_action.controls.get(self.bone_name)
 
     @property
     def channel(self):

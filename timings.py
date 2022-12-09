@@ -32,6 +32,10 @@ class SCG_CYCLER_PT_Timings_Panel(bpy.types.Panel, Context_Interface):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
 
+    @classmethod
+    def poll(cls, context):
+        return not bpy.context.scene.scg_cycler_context.timings is None
+
     def draw(self, context):
         row = self.layout.row()
         row.prop(self.cycler.timings, "fps_mode")

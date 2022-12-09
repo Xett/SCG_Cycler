@@ -172,7 +172,7 @@ class ResizeAnimationJob(Job):
         half_point = num_animated_frames / 2
 
         frame = 0.0
-        for marker in self.cycler.timings.frame_markers:        
+        for marker in self.cycler.rig_action.timings.frame_markers:        
             marker.frame = frame
             frame += (marker.length/100.0) * num_animated_frames
 
@@ -187,7 +187,7 @@ class ResizeAnimationJob(Job):
         bpy.context.scene.frame_start = 0
         bpy.context.scene.frame_end = num_animated_frames
 
-        for control in self.cycler.controls:
+        for control in self.cycler.rig_action.controls:
             for channel in control:
                 if channel.fcurve is None or (channel.control.mirrored and channel.mirror_fcurve is None):
                     continue
@@ -236,7 +236,7 @@ class UpdateKeyframeOffsetJob(Job):
         self.new_offset = new_offset
 
     def work(self):
-        for control in self.cycler.controls:
+        for control in self.cycler.rig_action.controls:
             for channel in control:
                 for keyframe in channel:
                     if self.keyframe == keyframe:
@@ -288,12 +288,12 @@ class UpdateMarkerLengthJob(Job):
 
         bpy.context.scene.timeline_markers.clear()
         for index, marker in enumerate(self.cycler.timings.frame_markers):
-            marker_1 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=marker.frame)
-            marker_2 = bpy.context.scene.timeline_markers.new("{0} 2".format(marker.name), frame=marker.frame+half_point)
+            marker_1 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=int(marker.frame))
+            marker_2 = bpy.context.scene.timeline_markers.new("{0} 2".format(marker.name), frame=int(marker.frame+half_point))
             if index == 0:
                 marker_3 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=num_animated_frames)
 
-        #for control in self.cycler.controls:
+        #for control in self.cycler.rig_action.controls:
         #    for channel in control:
         #        if channel.fcurve is None or (channel.control.mirrored and channel.mirror_fcurve is None):
         #            continue
@@ -344,7 +344,7 @@ class AnimationLengthChangedJob(Job):
     def work(self):
         job = ResizeAnimationJob(self.old_animation_length, self.new_animation_length, self.fps, self.fps)
         self.work_queue.add(job)
-        bpy.context.scene.frame_end = self.new_animation_length / self.fps
+        bpy.context.scene.frame_end = int(self.new_animation_length / self.fps)
 
 class AutoUpdateJob(Job):
     def __init__(self):
@@ -353,7 +353,7 @@ class AutoUpdateJob(Job):
     def work(self):
         anim_length = bpy.context.scene.frame_end
         half_point = anim_length / 2
-        for control in self.cycler.controls:
+        for control in self.cycler.rig_action.controls:
             for channel in control:
                 # Can't do anything if we need fcurves and can't find them
                 if channel.fcurve is None or (control.mirrored and channel.mirror_fcurve is None):

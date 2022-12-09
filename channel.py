@@ -60,7 +60,7 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
     #   Control   #
     ###############
     def update_control(self):
-        control = self.cycler.controls.get(self.parent_name)
+        control = self.cycler.rig_action.controls.get(self.parent_name)
         if control is None:
             return
         self.__control__ = control
@@ -75,7 +75,7 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
     ######################
     def update_mirror_control(self):
         if self.control is not None:
-            mirror_control = self.cycler.controls.get(self.control.mirror_name)
+            mirror_control = self.cycler.rig_action.controls.get(self.control.mirror_name)
             if mirror_control is not None:
                 self.__mirror_control__ = mirror_control
     @property
