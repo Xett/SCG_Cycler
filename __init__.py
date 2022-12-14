@@ -2,7 +2,7 @@ bl_info = {
     "name" : "Cycler",
     "author" : "Summoner's Circle Games",
     "description" : "Automatically mirror along keyframes and animation time",
-    "version" : (1, 4, 0),
+    "version" : (1, 4, 1),
     "blender" : (3, 4, 0),
     "category" : "Animation"
 }

@@ -434,7 +434,7 @@ class AutoUpdateJob(Job):
                                 value = 1.0
                             self.work_queue.add(AddKeyframeJob(channel.fcurve, half_frame, value))
 
-                frame = round(channel.keyframes.keyframes[0].frame_marker.frame + ((channel.keyframes.keyframes[0].offset/100)*anim_length))
+                frame = round(channel.children.children[0].frame_marker.frame + ((channel.children.children[0].offset/100)*anim_length))
                 last_frame = round(frame + anim_length)
                 expected_frames.append(last_frame)
                 if frame in fcurve_keyframe_points:
