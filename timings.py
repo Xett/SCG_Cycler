@@ -1,4 +1,5 @@
 import bpy
+import json
 
 from .interfaces import SCG_Cycler_Context_Interface as Context_Interface
 from .frame_markers import SCG_Cycler_Frame_Markers
@@ -22,6 +23,14 @@ class SCG_Cycler_Timing(bpy.types.PropertyGroup, Context_Interface):
     
     frame_markers : bpy.props.PointerProperty(type=SCG_Cycler_Frame_Markers)
 
+    @property
+    def json_data(self):
+        return {"fps_mode":self.fps_mode, "animation_length":self.animation_length, "frame_markers":self.frame_markers.json_data}
+    def load_from_json_data(self, json_data):
+        self.fps_mode = json_data["fps_mode"]
+        self.animation_length = json_data["animation_length"]
+        self.frame_markers.load_from_json_data(json_data["frame_markers"])
+
 ######################
 #   User Interface   #
 ######################
@@ -34,18 +43,18 @@ class SCG_CYCLER_PT_Timings_Panel(bpy.types.Panel, Context_Interface):
 
     @classmethod
     def poll(cls, context):
-        return not bpy.context.scene.scg_cycler_context.timings is None
+        return bpy.context.scene.scg_cycler_context.rig_action
 
     def draw(self, context):
         row = self.layout.row()
-        row.prop(self.cycler.timings, "fps_mode")
+        row.prop(self.cycler.rig_action.timings, "fps_mode")
         row = self.layout.row()
-        row.prop(self.cycler.timings, "animation_length")
+        row.prop(self.cycler.rig_action.timings, "animation_length")
         row = self.layout.row()
         box = row.box()
         row = box.row()
         row.operator("scg_cycler.add_frame_marker")
-        for index, frame_marker in enumerate(self.cycler.timings.frame_markers):
+        for index, frame_marker in enumerate(self.cycler.rig_action.timings.frame_markers):
             row = box.row()
             row.prop(frame_marker, "name")
             col = row.column()

@@ -1,6 +1,8 @@
 import bpy
+import json
 
 from .interfaces import SCG_Cycler_Context_Interface as Context_Interface
+from .interfaces import SCG_Cycler_Collection_Wrapper as Collection_Wrapper
 from .work import WorkQueue, UpdateKeyframeOffsetJob
 
 ################
@@ -8,9 +10,9 @@ from .work import WorkQueue, UpdateKeyframeOffsetJob
 ################
 class SCG_Cycler_Control_Channel_Keyframe(bpy.types.PropertyGroup, Context_Interface):
     def get_frame_marker_enum_items(self, context):
-        return [(frame_marker.name.upper(), frame_marker.name, frame_marker.name) for frame_marker in self.cycler.timings.frame_markers]
+        return [(frame_marker.name.upper(), frame_marker.name, frame_marker.name) for frame_marker in self.cycler.rig_action.timings.frame_markers]
     def frame_marker_update(self, context):
-        for frame_marker in self.cycler.timings.frame_markers:
+        for frame_marker in self.cycler.rig_action.timings.frame_markers:
             if frame_marker.name.upper() == self.marker.upper():
                 self.__frame_marker__ = frame_marker
                 return
@@ -45,31 +47,41 @@ class SCG_Cycler_Control_Channel_Keyframe(bpy.types.PropertyGroup, Context_Inter
             self["old_offset"] = 0.0
         return self["old_offset"]
 
+    @property
+    def json_data(self):
+        return {"marker":self.marker, "offset":self.offset, "inverted":self.inverted}
+    def load_from_json_data(self, json_data):
+        self.offset = json_data["offset"]
+        self.inverted = json_data["inverted"]
+
 #################
 #   Keyframes   #
 #################
-class SCG_Cycler_Control_Channel_Keyframes(bpy.types.PropertyGroup, Context_Interface):
-    keyframes : bpy.props.CollectionProperty(type=SCG_Cycler_Control_Channel_Keyframe)
-
-    def __iter__(self):
-        return self.keyframes.__iter__()
-
-    def __len__(self):
-        return len(self.keyframes)
+class SCG_Cycler_Control_Channel_Keyframes(bpy.types.PropertyGroup, Context_Interface, Collection_Wrapper):
+    children : bpy.props.CollectionProperty(type=SCG_Cycler_Control_Channel_Keyframe)
 
     def add(self, marker):
-        keyframe = self.keyframes.add()
+        keyframe = self.children.add()
         keyframe.marker = marker
         return keyframe
     
     def remove(self, index):
-        self.keyframes.remove(index)
+        self.children.remove(index)
 
     def get(self, marker):
-        for keyframe in self.keyframes:
+        for keyframe in self.children:
             if keyframe.marker == marker:
                 return keyframe
         return None
+
+    @property
+    def json_data(self):
+        return {"children":[child.json_data for child in self]}
+    def load_from_json_data(self, json_data):
+        self.children.clear()
+        for keyframe_data in json_data["children"]:
+            new_keyframe = self.add(keyframe_data["marker"])
+            new_keyframe.load_from_json_data(keyframe_data)
 
 #################
 #   Operators   #
@@ -93,7 +105,7 @@ class SCG_CYCLER_OT_Add_Channel_Keyframe(bpy.types.Operator, Context_Interface):
 
     def execute(self, context):
         markers = [keyframe.marker for keyframe in self.channel]
-        unused_markers = [frame_marker.name.upper() for frame_marker in self.cycler.timings.frame_markers if frame_marker.name.upper() not in markers]
+        unused_markers = [frame_marker.name.upper() for frame_marker in self.cycler.rig_action.timings.frame_markers if frame_marker.name.upper() not in markers]
         if len(unused_markers)==0: return {"CANCELLED"}
         self.channel.add(unused_markers[0])
         return {"FINISHED"}

@@ -4,6 +4,7 @@ from .interfaces import SCG_Cycler_Context_Interface
 from .work import work_tick
 from .rig_actions import SCG_Cycler_Rig_Actions
 from .bone import SCG_Cycler_Rig_Bone_Whitelists
+from .animation_template import SCG_Cycler_Animation_Templates
 
 ###############
 #   Context   #
@@ -12,37 +13,17 @@ from .bone import SCG_Cycler_Rig_Bone_Whitelists
 # Root property inside of the context scene, to hold all our plugin data.
 # There is an interface to access this as self.cycler
 class SCG_Cycler_Context(bpy.types.PropertyGroup):
+    # Instances
     rig_actions : bpy.props.PointerProperty(type=SCG_Cycler_Rig_Actions)    
-    auto_update : bpy.props.BoolProperty()
+    # Whitelists library
     rig_bone_whitelists : bpy.props.PointerProperty(type=SCG_Cycler_Rig_Bone_Whitelists)
+    # Animation Templates
+    animation_templates : bpy.props.PointerProperty(type=SCG_Cycler_Animation_Templates)
+    auto_update : bpy.props.BoolProperty()
 
     @property
     def rig_action(self):
         return self.rig_actions.rig_action
-
-    @property
-    def action(self):
-        if self.rig_action is None:
-            return None
-        return self.rig_action.action
-
-    @property
-    def armature(self):
-        if self.rig_action is None:
-            return None
-        return self.rig_action.armature
-
-    @property
-    def timings(self):
-        if self.rig_action is None:
-            return None
-        return self.rig_action.timings
-
-    @property
-    def rig_bones(self):
-        if self.rig_action is None:
-            return None
-        return self.rig_action.rig_bones
 
     def update_ui(self):
         self.rig_actions.update_ui()
@@ -77,14 +58,11 @@ class SCG_CYCLER_PT_Context_Panel(bpy.types.Panel, SCG_Cycler_Context_Interface)
         self.layout.row().operator("scg_cycler.add_rig_action")
         self.layout.row().prop_search(self.cycler.rig_actions, "current_rig_action_name", self.cycler.rig_actions, "rig_actions")
         if not self.cycler.rig_action is None:
-            row = self.layout.row()
-            row.prop(self.cycler.rig_action, "action")
-        if not self.cycler.rig_action is None:
-            row = self.layout.row()
-            row.prop(self.cycler.rig_action, "armature")
+            self.layout.row().prop(self.cycler.rig_action, "action")
+            self.layout.row().prop(self.cycler.rig_action, "armature")
 
-        row = self.layout.row()
         label = "Enabled" if self.cycler.auto_update else "Disabled"
+        row = self.layout.row()
         row.label(text="Auto Update is currently "+label)
         col = row.column()
         button_label = "Disable" if self.cycler.auto_update else "Enable"

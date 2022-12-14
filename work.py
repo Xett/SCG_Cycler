@@ -8,7 +8,7 @@ def work_tick():
     start_time = time.time()
     current_time = start_time
     cutoff_time = start_time + 0.1  # So we can process multiple jobs in an update, and not hang from the queue constantly filling
-    if bpy.context.scene.scg_cycler_context.action and WorkQueue().job_queue.empty():
+    if bpy.context.scene.scg_cycler_context.rig_action and bpy.context.scene.scg_cycler_context.rig_action.action and WorkQueue().job_queue.empty():
         WorkQueue().add(AutoUpdateJob())
     while current_time < cutoff_time and not WorkQueue().job_queue.empty(): # Only work when we have time and shit to do
         WorkQueue().process()
@@ -177,7 +177,7 @@ class ResizeAnimationJob(Job):
             frame += (marker.length/100.0) * num_animated_frames
 
         bpy.context.scene.timeline_markers.clear()
-        for index, marker in enumerate(self.cycler.timings.frame_markers):
+        for index, marker in enumerate(self.cycler.rig_action.timings.frame_markers):
             marker_1 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=round(marker.frame))
             marker_2 = bpy.context.scene.timeline_markers.new("{0} 2".format(marker.name), frame=round(marker.frame+half_point))
             if index == 0:
@@ -279,48 +279,19 @@ class UpdateMarkerLengthJob(Job):
         num_animated_frames = bpy.context.scene.frame_end
         half_point = num_animated_frames / 2
 
-        frame_markers = {frame_marker:id for id, frame_marker in enumerate(self.cycler.timings.frame_markers)}
+        frame_markers = {frame_marker:id for id, frame_marker in enumerate(self.cycler.rig_action.timings.frame_markers)}
 
         frame = 0.0
-        for frame_marker in self.cycler.timings.frame_markers:
+        for frame_marker in self.cycler.rig_action.timings.frame_markers:
             frame_marker.frame = frame
             frame += (frame_marker.length/100.0) * num_animated_frames
 
         bpy.context.scene.timeline_markers.clear()
-        for index, marker in enumerate(self.cycler.timings.frame_markers):
+        for index, marker in enumerate(self.cycler.rig_action.timings.frame_markers):
             marker_1 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=int(marker.frame))
             marker_2 = bpy.context.scene.timeline_markers.new("{0} 2".format(marker.name), frame=int(marker.frame+half_point))
             if index == 0:
                 marker_3 = bpy.context.scene.timeline_markers.new("{0} 1".format(marker.name), frame=num_animated_frames)
-
-        #for control in self.cycler.rig_action.controls:
-        #    for channel in control:
-        #        if channel.fcurve is None or (channel.control.mirrored and channel.mirror_fcurve is None):
-        #            continue
-        #        fcurve_keyframe_points = {keyframe_point.co[0]:keyframe_point for keyframe_point in channel.fcurve.keyframe_points}
-        #        for keyframe in channel:
-        #            old_frame = round(keyframe.frame_marker.old_frame + ((keyframe.offset/100)*num_animated_frames))
-        #            new_frame = round(keyframe.frame_marker.frame + ((keyframe.offset/100)*num_animated_frames))
-        #            if old_frame in fcurve_keyframe_points:
-        #                self.work_queue.add(MoveKeyframeJob(fcurve_keyframe_points[old_frame], new_frame))
-        #
-        #                old_half_frame = old_frame + half_point
-        #                new_half_frame = new_frame + half_point
-        #                if control.mirrored:
-        #                    mirror_fcurve_keyframe_points = {keyframe_point.co[0]:keyframe_point for keyframe_point in channel.mirror_fcurve.keyframe_points}
-        #                    if old_half_frame in mirror_fcurve_keyframe_points:
-        #                        self.work_queue.add(MoveKeyframeJob(mirror_fcurve_keyframe_points[old_half_frame], new_frame))
-        #                else:
-        #                    if old_half_frame in fcurve_keyframe_points:
-        #                        self.work_queue.add(MoveKeyframeJob(fcurve_keyframe_points[old_half_frame], new_half_frame))
-        #
-        #                old_end_frame = old_frame + num_animated_frames
-        #                new_end_frame = new_frame + num_animated_frames
-        #                if old_end_frame in fcurve_keyframe_points:
-        #                    self.work_queue.add(MoveKeyframeJob(fcurve_keyframe_points[old_end_frame], new_end_frame))
-        #                self.work_queue.add(UpdateFCurveJob(channel.fcurve))  
-        #                if control.mirrored:
-        #                    self.work_queue.add(UpdateFCurveJob(channel.mirror_fcurve))
 
 class FPSChangedJob(Job):
     def __init__(self, animation_length, old_fps, new_fps):

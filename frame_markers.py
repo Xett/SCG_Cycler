@@ -1,4 +1,5 @@
 import bpy
+import json
 
 from .interfaces import SCG_Cycler_Context_Interface as Context_Interface
 from .work import WorkQueue, UpdateMarkerLengthJob
@@ -43,6 +44,10 @@ class SCG_Cycler_Frame_Marker(bpy.types.PropertyGroup, Context_Interface):
             return self["old_frame"]
         return 0.0
 
+    @property
+    def json_data(self):
+        return {"name":self.name, "length":self.length, "frame":self.frame}
+
 #########################
 #   Container Wrapper   #
 #########################
@@ -62,6 +67,17 @@ class SCG_Cycler_Frame_Markers(bpy.types.PropertyGroup, Context_Interface):
     def remove(self, index):
         self.markers.remove(index)
 
+    @property
+    def json_data(self):
+        return [frame_marker.json_data for frame_marker in self.markers]
+    def load_from_json_data(self, json_data):
+        self.markers.clear()
+        for frame_marker in json_data:
+            new_marker = self.markers.add()
+            new_marker.name = frame_marker["name"]
+            new_marker.length = frame_marker["length"]
+            new_marker.frame = frame_marker["frame"]
+
 #################
 #   Operators   #
 #################
@@ -71,7 +87,7 @@ class SCG_CYCLER_OT_Add_Frame_Marker(bpy.types.Operator, Context_Interface):
     bl_description = "Add a new Frame Marker"
 
     def execute(self, context):
-        self.cycler.timings.frame_markers.add()
+        self.cycler.rig_action.timings.frame_markers.add()
         return {"FINISHED"}
 
 class SCG_CYCLER_OT_Remove_Frame_Marker(bpy.types.Operator, Context_Interface):
@@ -82,7 +98,7 @@ class SCG_CYCLER_OT_Remove_Frame_Marker(bpy.types.Operator, Context_Interface):
     index : bpy.props.IntProperty(name="Index")
 
     def execute(self, context):
-        self.cycler.timings.frame_markers.remove(self.index)
+        self.cycler.rig_action.timings.frame_markers.remove(self.index)
         return {"FINISHED"}
 
 ###############################

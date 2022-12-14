@@ -1,51 +1,41 @@
 import bpy
+import json
 
 from .interfaces import SCG_Cycler_Context_Interface as Context_Interface
-from .panel import Panel_Factory, Children_Have_Panels
+from .interfaces import SCG_Cycler_Collection_Wrapper as Collection_Wrapper
+from .panel import Children_Have_Panels
 from .channel import SCG_Cycler_Control_Channels
 from .constants import *
 
 ################
 #   Control   #
 ################
-class SCG_Cycler_Control(bpy.types.PropertyGroup, Context_Interface, Children_Have_Panels):    
+class SCG_Cycler_Control(bpy.types.PropertyGroup, Context_Interface, Collection_Wrapper, Children_Have_Panels):    
     def control_bone_get(self):
         if "bone_name" not in self:
             return ""
         return self["bone_name"]
     def control_bone_set(self, value):
-        if "ORG" in value: return
-        elif "DEF" in value: return
-        elif "MCH" in value: return
-        elif "f_" == value[:2]: return
-        elif "_master" in value: return
-        elif value in [control.bone_name for control in self.cycler.rig_action.controls if self.bone_name != value]: return
+        if value in [control.bone_name for control in self.cycler.rig_action.controls if self.bone_name != value]: return
         self["bone_name"] = value
     def control_bone_update(self, context):
         for channel in self:
             channel.parent_name = self.bone_name
         self.cycler.rig_action.controls.remove_panels()
         self.cycler.rig_action.controls.add_panels()
-        #self.cycler.update_valid_armature_bones()
 
     bone_name : bpy.props.StringProperty(name="Bone", update=control_bone_update, set=control_bone_set, get=control_bone_get)
-    channels : bpy.props.PointerProperty(type=SCG_Cycler_Control_Channels)
+    children : bpy.props.PointerProperty(type=SCG_Cycler_Control_Channels)
     mirrored : bpy.props.BoolProperty(name="Use mirror control")
 
-    def __iter__(self):
-        return self.channels.__iter__()
-
-    def __len__(self):
-        return len(self.channels)
-
     def add(self, type, axis):
-        return self.channels.add(type.upper(), axis.upper(), self.bone_name)
+        return self.children.add(type.upper(), axis.upper(), self.bone_name)
     
     def remove(self, type, axis):
-        self.channels.remove(type.upper(), axis.upper())
+        self.children.remove(type.upper(), axis.upper())
 
     def get(self, type, axis):
-        return self.channels.get(type.upper(), axis.upper())
+        return self.children.get(type.upper(), axis.upper())
 
     @property
     def mirrors(self):
@@ -102,7 +92,7 @@ class SCG_Cycler_Control(bpy.types.PropertyGroup, Context_Interface, Children_Ha
 
             def draw(self, context):
                 row = self.layout.row()
-                if len(self.cycler.timings.frame_markers) > len(self.channel):
+                if len(self.cycler.rig_action.timings.frame_markers) > len(self.channel):
                     add_operator = row.operator("scg_cycler.add_channel_keyframe")
                     add_operator.bone_name = self.bone_name
                     add_operator.channel_type = self.channel_type
@@ -131,26 +121,30 @@ class SCG_Cycler_Control(bpy.types.PropertyGroup, Context_Interface, Children_Ha
                 new_class = self.create_panel_class(channel_type=type, channel_axis=axis)
                 self.panel_factory.register_new_panel(panel_id, new_class)
 
+    @property
+    def json_data(self):
+        return {"bone_name":self.bone_name, "mirrored":self.mirrored, "children":self.children.json_data}
+    def load_from_json_data(self, json_data):
+        self.mirrored = json_data["mirrored"]
+        self.children.load_from_json_data(json_data["children"])
+
+
 ################
 #   Controls   #
 ################
-class SCG_Cycler_Controls(bpy.types.PropertyGroup, Context_Interface, Children_Have_Panels):
-    controls : bpy.props.CollectionProperty(type=SCG_Cycler_Control)
+class SCG_Cycler_Controls(bpy.types.PropertyGroup, Context_Interface, Collection_Wrapper, Children_Have_Panels):
+    children : bpy.props.CollectionProperty(type=SCG_Cycler_Control)
 
-    def __iter__(self):
-        return self.controls.__iter__()
-
-    def __len__(self):
-        return len(self.controls)
-
-    def add(self):
-        control = self.controls.add()
-        current_bone_names = [control.bone_name for control in self]
-        for bone in self.cycler.armature.bones:
-            # Only adding valid bones, via the name, this kinda needs to be done as a whitelist, and this is implemented in other places too, which is kinda bad lol
-            if bone.name not in current_bone_names and "ORG" not in bone.name and "DEF" not in bone.name and "MCH" not in bone.name and "f_" != bone.name[:2] and "_master" not in bone.name:
-                control.bone_name = bone.name
-                break
+    def add(self, name=None):
+        control = self.children.add()
+        if name is None:
+            current_bone_names = [control.bone_name for control in self]
+            for bone in self.cycler.rig_action.armature.bones:
+                if bone.name not in current_bone_names:
+                    control.bone_name = bone.name
+                    break
+        else:
+            control.bone_name = name
         for type in TYPES:
             for axis in AXIS:
                 control.add(type.upper(), axis.upper())
@@ -158,12 +152,12 @@ class SCG_Cycler_Controls(bpy.types.PropertyGroup, Context_Interface, Children_H
         return control
 
     def remove(self, index):
-        self.controls.remove(index)
+        self.children.remove(index)
         self.remove_panels()
         self.add_panels()
 
     def get(self, bone_name):
-        for control in self.controls:
+        for control in self.children:
             if control.bone_name == bone_name:
                 return control
         return None
@@ -203,12 +197,10 @@ class SCG_Cycler_Controls(bpy.types.PropertyGroup, Context_Interface, Children_H
                 row = self.layout.row()
                 if self.control is None:
                     return
-                row.prop_search(self.control, "bone_name", self.cycler.rig_bones, "whitelist")
+                row.prop_search(self.control, "bone_name", self.cycler.rig_action.rig_bones, "whitelist")
                 if self.control.mirrors:
-                    col = row.column()
-                    col.prop(self.control, "mirrored")
-                col = row.column()
-                remove = col.operator("scg_cycler.remove_control")
+                    row.column().prop(self.control, "mirrored")
+                remove = row.column().operator("scg_cycler.remove_control")
                 remove.index = self.index
         return ControlPanel
 
@@ -224,6 +216,15 @@ class SCG_Cycler_Controls(bpy.types.PropertyGroup, Context_Interface, Children_H
         for control in self:
             control.remove_panels()
 
+    @property
+    def json_data(self):
+        return [control.json_data for control in self]
+    def load_from_json_data(self, json_data):
+        self.children.clear()
+        for control_data in json_data:
+            new_control = self.add(control_data["bone_name"])
+            new_control.load_from_json_data(control_data)
+
 ######################
 #   User Interface   #
 ######################
@@ -236,12 +237,18 @@ class SCG_CYCLER_PT_Controls_Panel(bpy.types.Panel, Context_Interface):
 
     @classmethod
     def poll(cls, context):
-        return context.scene.scg_cycler_context.armature
+        return context.scene.scg_cycler_context.rig_action and context.scene.scg_cycler_context.rig_action.armature
 
     def draw(self, context):
+        self.layout.row().operator("scg_cycler.refresh_animation_templates")
         row = self.layout.row()
-        row.operator("scg_cycler.add_control")            
-
+        row.prop_search(self.cycler.animation_templates, "current_animation_template_name", self.cycler.animation_templates, "children")
+        row.column().operator("scg_cycler.load_animation_template")
+        row = self.layout.row()
+        row.prop(self.cycler.animation_templates, "current_animation_template_name")
+        row.column().operator("scg_cycler.save_animation_template")
+        self.layout.row().operator("scg_cycler.add_control")
+        
 #################
 #   Operators   #
 #################
@@ -259,7 +266,7 @@ class SCG_CYCLER_OT_Remove_Control(bpy.types.Operator, Context_Interface):
     bl_label = "Remove Control"
     bl_description = "Remove a Control"
 
-    index : bpy.props.IntProperty(name="Index")
+    index : bpy.props.IntProperty()
 
     def execute(self, context):
         self.cycler.rig_action.controls.remove(self.index)

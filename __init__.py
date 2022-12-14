@@ -2,19 +2,19 @@ bl_info = {
     "name" : "Cycler",
     "author" : "Summoner's Circle Games",
     "description" : "Automatically mirror along keyframes and animation time",
-    "version" : (1, 3, 0),
+    "version" : (1, 4, 0),
     "blender" : (3, 4, 0),
     "category" : "Animation"
 }
 
 import bpy
-from . import context, frame_markers, controls, channel, keyframes, bone, timings, addon_preferences, rig_actions
+from . import context, frame_markers, controls, channel, keyframes, bone, timings, addon_preferences, rig_actions, animation_template
 from .work import work_tick
 
 ###############################
 #   Register and Unregister   #
 ###############################
-modules = (bone, frame_markers, keyframes, channel, controls, timings, rig_actions, context, addon_preferences)
+modules = (bone, frame_markers, keyframes, channel, controls, timings, rig_actions, animation_template, context, addon_preferences)
 
 @bpy.app.handlers.persistent
 def initialise_panels(self):

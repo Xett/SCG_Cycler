@@ -1,7 +1,8 @@
 import bpy
+import json
 
 from .interfaces import SCG_Cycler_Context_Interface as Context_Interface
-from .panel import Panel_Factory
+from .interfaces import SCG_Cycler_Collection_Wrapper as Collection_Wrapper
 from .constants import *
 from .keyframes import SCG_Cycler_Control_Channel_Keyframes
 
@@ -10,7 +11,7 @@ from .keyframes import SCG_Cycler_Control_Channel_Keyframes
 ###############
 
 # Defines a Channel in a Control of a type (Location, Rotation, Scale) along an axis (X, Y, Z)
-class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):   
+class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface, Collection_Wrapper):   
 
     # Update properties to respond to type change
     def type_update(self, context):
@@ -39,22 +40,25 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
     def get_name(self):
         return "{0}_{1}_{2}".format(self.parent_name.upper().replace(".", "_").replace("-", "_"), self.type.upper(), self.axis.upper())
 
-    keyframes : bpy.props.PointerProperty(type=SCG_Cycler_Control_Channel_Keyframes)
-
-    def __iter__(self):
-        return self.keyframes.__iter__()
-
-    def __len__(self):
-        return len(self.keyframes)
+    children : bpy.props.PointerProperty(type=SCG_Cycler_Control_Channel_Keyframes)
 
     def add(self, marker):
-        return self.keyframes.add(marker)
+        return self.children.add(marker)
 
     def remove(self, index):
-        self.keyframes.remove(index)
+        self.children.remove(index)
 
     def get(self, marker):
-        return self.keyframes.get(marker)
+        return self.children.get(marker)
+
+    @property
+    def json_data(self):
+        return {"type":self.type, "axis":self.axis, "parent_name":self.parent_name, "children":self.children.json_data}
+    def load_from_json_data(self, json_data):
+        self.type = json_data["type"]
+        self.axis = json_data["axis"]
+        self.parent_name = json_data["parent_name"]
+        self.children.load_from_json_data(json_data["children"])
 
     ###############
     #   Control   #
@@ -120,7 +124,7 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
     #   FCurve   #
     ##############
     def update_fcurve(self):
-        for fcurve in self.cycler.action.fcurves:
+        for fcurve in self.cycler.rig_action.action.fcurves:
             if self.data_path == fcurve.data_path and self.array_index == fcurve.array_index:
                 self.__fcurve__ = fcurve
                 return
@@ -136,7 +140,7 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
     def update_mirror_fcurve(self):
         if self.mirror_channel is None:
             return
-        for fcurve in self.cycler.action.fcurves:
+        for fcurve in self.cycler.rig_action.action.fcurves:
             if self.mirror_channel.data_path == fcurve.data_path and self.array_index == fcurve.array_index:
                 self.__mirror_fcurve__ = fcurve
                 return
@@ -152,33 +156,34 @@ class SCG_Cycler_Control_Channel(bpy.types.PropertyGroup, Context_Interface):
 
 # Channel Collection Property Wrapper
 # Handles adding, removing, getting, length and iteration
-class SCG_Cycler_Control_Channels(bpy.types.PropertyGroup, Context_Interface):
-    channels : bpy.props.CollectionProperty(type=SCG_Cycler_Control_Channel)
-
-    def __iter__(self):
-        return self.channels.__iter__()
-
-    def __len__(self):
-        return len(self.channels)
+class SCG_Cycler_Control_Channels(bpy.types.PropertyGroup, Context_Interface, Collection_Wrapper):
+    children : bpy.props.CollectionProperty(type=SCG_Cycler_Control_Channel)
 
     def add(self, type, axis, parent_name):
-        channel = self.channels.add()
+        channel = self.children.add()
         channel.type = type
         channel.axis = axis
         channel.parent_name = parent_name
         return channel
     
     def remove(self, type, axis):
-        for index, channel in enumerate(self.channels):
+        for index, channel in enumerate(self.children):
             if channel.type == type and channel.axis == axis:
-                self.channels.remove(index)
+                self.children.remove(index)
                 return
 
     def get(self, type, axis):
-        for channel in self.channels:
+        for channel in self.children:
             if channel.type == type and channel.axis == axis:
                 return channel
         return None
+
+    @property
+    def json_data(self):
+        return [child.json_data for child in self]
+    def load_from_json_data(self, json_data):
+        for index, channel_data in enumerate(json_data):
+            self.children[index].load_from_json_data(channel_data)
 
 ###############################
 #   Register and Unregister   #

@@ -1,4 +1,5 @@
 import bpy
+import json
 
 from .interfaces import SCG_Cycler_Context_Interface as Context_Interface
 from .controls import SCG_Cycler_Controls
@@ -23,6 +24,18 @@ class SCG_Cycler_Rig_Action(bpy.types.PropertyGroup, Context_Interface):
     controls : bpy.props.PointerProperty(type=SCG_Cycler_Controls)
     timings : bpy.props.PointerProperty(type=SCG_Cycler_Timing)
     rig_bones : bpy.props.PointerProperty(type=SCG_Cycler_Rig_Bones)
+
+    @property
+    def json_data(self):
+        return {"controls":self.controls.json_data, "timings":self.timings.json_data}
+
+    def load_from_json_data(self, json_data):
+        self.controls.load_from_json_data(json_data["controls"])
+        self.timings.load_from_json_data(json_data["timings"])
+
+    def update_from_animation_template(self, animation_template):
+        self.timings.load_from_json_data(animation_template.timings.json_data)
+        self.controls.load_from_json_data(animation_template.controls.json_data)
 
 class SCG_Cycler_Rig_Actions(bpy.types.PropertyGroup):
     def current_rig_action_name_changed(self, context):
